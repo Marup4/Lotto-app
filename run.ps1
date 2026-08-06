@@ -1,4 +1,11 @@
-# 로또 앱 개발용 실행 스크립트
+﻿# 로또 앱 개발용 실행 스크립트
+#
+# ⚠️ 이 파일은 반드시 UTF-8 with BOM 으로 저장할 것.
+#    Windows PowerShell 5.1은 BOM이 없으면 파일을 ANSI(cp949)로 읽어서
+#    한글 주석·문자열이 깨지고, 따옴표 짝이 무너져 파싱 자체가 실패한다.
+#    BOM을 잃었다면:
+#      $c = Get-Content -Raw -Encoding UTF8 run.ps1
+#      Set-Content run.ps1 -Value $c -Encoding UTF8 -NoNewline
 #
 #   .\run.ps1 test        유닛 테스트
 #   .\run.ps1 collect     판매점 150회차씩 수집 (여러 번 반복 실행)
@@ -74,18 +81,27 @@ except Exception as e:
         if (Test-Path $storeDir) {
             $storeCount = (Get-ChildItem $storeDir -Filter *.json).Count
         }
-        if (Test-Path $manifest) {
-            $m = Get-Content $manifest -Raw | ConvertFrom-Json
-            Write-Host "최신 회차       : $($m.latestRound)"
-            Write-Host "당첨번호 회차   : $($m.totalRounds)"
-        } else {
-            Write-Host "manifest 없음 - 전량 수집이 아직 안 끝났다"
+        if (-not (Test-Path $manifest)) {
+            Write-Host "아직 수집을 시작하지 않았다."
+            Write-Host "`n.\run.ps1 collect 를 실행할 것." -ForegroundColor Yellow
+            break
         }
-        Write-Host "판매점 보유 회차: $storeCount"
-        if (Test-Path $manifest) {
-            Write-Host "`n완료. .\run.ps1 view 로 확인할 것." -ForegroundColor Green
+
+        $m = Get-Content $manifest -Raw -Encoding UTF8 | ConvertFrom-Json
+        Write-Host "최신 회차       : $($m.latestRound)"
+        Write-Host "당첨번호 회차   : $($m.totalRounds)"
+        Write-Host "판매점 보유 회차: $storeCount / $($m.totalRounds)"
+
+        # complete 는 판매점까지 전량 모였을 때만 true 다.
+        # 통계·랭킹은 그때 생성되므로 이 값으로 안내를 갈라야 한다.
+        if ($m.complete) {
+            Write-Host "`n전량 수집 완료. .\run.ps1 view 로 확인할 것." -ForegroundColor Green
         } else {
-            Write-Host "`n.\run.ps1 collect 를 반복 실행할 것 (사이에 10분 이상 간격)." -ForegroundColor Yellow
+            $left = $m.totalRounds - $storeCount
+            $runs = [math]::Ceiling($left / 150)
+            Write-Host "`n백필 진행 중 - 판매점 약 $left 개 회차 남음 (collect 약 $runs 회)" -ForegroundColor Yellow
+            Write-Host ".\run.ps1 collect 를 반복 실행할 것 (사이에 10분 이상 간격)." -ForegroundColor Yellow
+            Write-Host "당첨번호는 이미 다 받았으므로 .\run.ps1 view 로 지금도 볼 수 있다."
         }
     }
 
