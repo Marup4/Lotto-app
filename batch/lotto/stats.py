@@ -4,6 +4,7 @@
 """
 
 ALL_NUMBERS = range(1, 46)
+RECENT_WINDOWS = (10, 30, 50)
 
 
 def number_frequency(draws):
@@ -51,4 +52,31 @@ def method_totals(draws):
         "반자동": sum(d["winSemi"] for d in covered),
         "fromRound": min((d["round"] for d in covered), default=None),
         "coveredRounds": len(covered),
+    }
+
+
+def build_stats_payload(draws):
+    """stats.json 전체를 만든다.
+
+    앱은 1,200회차를 매번 순회하지 않는다. 여기서 다 계산해 넘긴다.
+    JSON 키는 문자열이 되므로 번호 키를 명시적으로 str로 만든다 —
+    Flutter 쪽에서 int 키를 기대하다 깨지는 일을 막기 위함이다.
+    """
+    ordered = sorted(draws, key=lambda d: d["round"])
+
+    def as_str_keys(counts):
+        return {str(n): c for n, c in counts.items()}
+
+    return {
+        "totalRounds": len(ordered),
+        "latestRound": ordered[-1]["round"] if ordered else None,
+        "frequency": as_str_keys(number_frequency(ordered)),
+        "recentFrequency": {
+            str(w): as_str_keys(number_frequency(ordered[-w:]))
+            for w in RECENT_WINDOWS
+        },
+        "drought": as_str_keys(drought(ordered)),
+        # 자동/수동은 262회차부터만 존재한다. fromRound를 함께 실어
+        # 앱이 "N회차 이후 기준"이라고 고지할 수 있게 한다.
+        "method": method_totals(ordered),
     }
