@@ -2,6 +2,9 @@
 
 주 1회 갱신되는 로또 데이터를 **서버 운영 없이** 소비하는 경량 Android 앱.
 
+> **작업을 이어서 하려면 [docs/STATUS.md](docs/STATUS.md) 부터 읽을 것.**
+> 진행 상황, 확정 사항, 밟은 함정들이 거기 정리돼 있다.
+
 - 설계 문서: Notion "앱 개발 설계(초안/임시) 로또" v0.3
 - 패키지명: `com.lottolite.app` (변경 불가)
 - 스택: Flutter (앱) + Python (배치) + GitHub Actions/Pages (인프라)
