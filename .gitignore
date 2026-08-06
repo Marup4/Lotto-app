@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Flutter (Week 2)
+app/build/
+app/.dart_tool/
+app/.flutter-plugins*
+*.iml
+.idea/
+
+# 서명키 — 절대 커밋 금지
+*.jks
+*.keystore
+key.properties
+
+# AdMob 운영 광고 ID 등
+.env

@@ -1,0 +1,75 @@
+name: 주간 데이터 갱신
+
+on:
+  schedule:
+    # 토 19:00 UTC = 일 04:00 KST. 추첨(토 20:45 KST) 후 약 7시간.
+    - cron: '0 19 * * 6'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # ⚠️ GITHUB_TOKEN으로 커밋하면 저장소 활동으로 인정되지 않아
+          # 60일 뒤 cron이 자동 비활성화될 수 있다 (계획서 §5-③).
+          # PAT를 DATA_PAT 시크릿에 넣어두면 그 경로를 피한다.
+          token: ${{ secrets.DATA_PAT || github.token }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 의존성 설치
+        run: pip install -r batch/requirements.txt
+
+      - name: 유닛 테스트
+        working-directory: batch
+        run: python -m pytest -q
+
+      - name: 데이터 수집 (증분)
+        working-directory: batch
+        # 검증 실패 시 build.py가 exit 1 → 이 스텝이 빨갛게 죽는다.
+        # 빈 파일을 성공으로 배포하는 일은 없다.
+        run: python build.py --delay 1.0
+
+      - name: 변경분 커밋
+        run: |
+          git config user.name  "lotto-data-bot"
+          git config user.email "actions@github.com"
+          git add data
+          if git diff --staged --quiet; then
+            echo "변경 없음 — 신규 회차가 아직 없는 것으로 보인다"
+            exit 0
+          fi
+          git commit -m "data: $(date -u +%Y-%m-%d) 주간 갱신"
+          git push
+
+  # Pages 배포는 data/ 가 갱신된 뒤에만 돈다
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: data
+      - id: deploy
+        uses: actions/deploy-pages@v4
