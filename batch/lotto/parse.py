@@ -25,7 +25,10 @@ def parse_draw(raw):
         "bonus": raw["bnsWnNo"],
         "firstWinners": raw["rnk1WnNope"],
         "firstAmount": raw["rnk1WnAmt"],
-        "totalSales": raw["rlvtEpsdSumNtslAmt"],
+        # 총 판매금액은 wholEpsdSumNtslAmt 다.
+        # rlvtEpsdSumNtslAmt는 1~5등 당첨금 총합(= 판매액의 50%)이라
+        # 그걸 쓰면 화면에 실제의 절반이 찍힌다.
+        "totalSales": raw["wholEpsdSumNtslAmt"],
         "winAuto": raw["winType1"],
         "winManual": raw["winType2"],
         "winSemi": raw["winType3"],

@@ -10,7 +10,10 @@ def test_parse_draw_maps_api_fields_to_app_schema():
         "bnsWnNo": 27,
         "rnk1WnNope": 15,
         "rnk1WnAmt": 1854965425,
+        # rlvt = 1~5등 당첨금 총합, whol = 총 판매금액 (정확히 2배).
+        # 로또는 판매액의 50%가 당첨금으로 나간다 — 화면에 쓸 값은 whol이다.
         "rlvtEpsdSumNtslAmt": 57634128500,
+        "wholEpsdSumNtslAmt": 115268257000,
         "winType1": 12, "winType2": 2, "winType3": 1,
     }
 
@@ -21,7 +24,7 @@ def test_parse_draw_maps_api_fields_to_app_schema():
         "bonus": 27,
         "firstWinners": 15,
         "firstAmount": 1854965425,
-        "totalSales": 57634128500,
+        "totalSales": 115268257000,
         "winAuto": 12,
         "winManual": 2,
         "winSemi": 1,
