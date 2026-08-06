@@ -33,12 +33,27 @@ API가 또 바뀌면 `/lt645/result` 와 `/wnprchsplcsrch/home` 의 HTML에서
 cd batch
 python -m venv ../.venv && ../.venv/Scripts/pip install -r requirements.txt
 
-python -m pytest -q          # 유닛 테스트
-python build.py --full       # 전 회차 최초 수집 (약 10분)
-python build.py              # 증분 갱신 (신규 회차만)
+python -m pytest -q                        # 유닛 테스트
+python build.py --max-stores 200           # 최초 수집 — 나눠서 여러 번 (아래 경고)
+python build.py                            # 증분 갱신 (신규 회차만, 요청 1~2회)
 ```
 
 검증에 실패하면 `exit 1`로 죽는다. 빈 파일을 성공으로 배포하지 않기 위함이다.
+
+### ⚠️ 최초 전 회차 수집은 IP 차단을 부른다
+
+0.5초 간격으로 600회 남짓 연속 요청했더니 동행복권이 이 IP를 막았다
+(2026-08-06 실측 — 다른 사이트는 정상, 동행복권만 ConnectTimeout).
+차단은 일시적이지만, 최초 백필은 조심해서 해야 한다.
+
+- `--max-stores 200` 정도로 끊어서, 사이에 시간을 두고 여러 번 실행한다
+- `--delay` 는 1.0 이상을 유지한다 (기본값 1.0)
+- 판매점은 회차마다 즉시 저장되므로 중단돼도 다음 실행이 이어받는다
+- 전량을 못 받은 상태에서는 파생 파일(`stats.json`·`store-ranking.json`)을
+  만들지 않는다. 불완전한 랭킹을 배포하지 않기 위함이다
+
+**주간 증분 갱신은 요청이 1~2회뿐이라 이 문제와 무관하다.**
+최초 백필만 넘기면 된다. Actions 러너는 IP가 달라 로컬 차단과 무관하다.
 
 ## 알려진 데이터 특성
 
