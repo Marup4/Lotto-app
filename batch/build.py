@@ -43,27 +43,34 @@ def load_known_draws(full):
     return {d["round"]: d for d in load_json(DATA / "draws.json", [])}
 
 
-def write_outputs(draw_list, all_stores, stores, latest):
+def write_outputs(draw_list, all_stores, stores, latest, complete):
     """정적 JSON 일체를 쓰고 manifest를 갱신한다.
 
     manifest의 해시로 앱이 '무엇이 바뀌었는지' 판단해
     변경된 파일만 내려받는다 (계획서 §4).
     회차별 판매점 파일은 수집 단계에서 이미 저장됐으므로 여기서 다시 쓰지 않는다.
+
+    complete=False(백필 진행 중)면 당첨번호까지만 쓴다. 통계와 랭킹은
+    판매점이 전량 모여야 의미가 있으므로 만들지 않는다.
     """
     files = {
         "draws.json": write_json(DATA / "draws.json", draw_list),
         "draws-latest.json": write_json(
             DATA / "draws-latest.json", draw_list[-RECENT_WINDOW:]),
-        "stats.json": write_json(
-            DATA / "stats.json", build_stats_payload(draw_list)),
-        "store-ranking.json": write_json(
-            DATA / "store-ranking.json",
-            build_ranking(all_stores, limit=RANKING_LIMIT)),
     }
+    if complete:
+        files["stats.json"] = write_json(
+            DATA / "stats.json", build_stats_payload(draw_list))
+        files["store-ranking.json"] = write_json(
+            DATA / "store-ranking.json",
+            build_ranking(all_stores, limit=RANKING_LIMIT))
+
     write_json(DATA / "manifest.json", {
         "latestRound": latest,
         "totalRounds": len(draw_list),
         "storeRounds": sorted(stores),
+        # 앱은 complete=false 인 데이터를 신뢰해선 안 된다 (백필 진행 중)
+        "complete": complete,
         "files": files,
     })
     return files
@@ -93,23 +100,24 @@ def main():
     draws = collect_draws(api, latest, load_known_draws(args.full))
     stores, remaining = collect_stores(api, draws, max_requests=args.max_stores)
 
-    # 아직 못 받은 회차가 있으면 랭킹·검증이 성립하지 않는다.
-    # 캐시만 쌓아두고 정상 종료한다 — 다음 실행이 이어받는다.
-    if remaining:
-        print(f"\n판매점 {remaining}개 회차가 남았다. "
-              f"전량 수집 후에 파생 파일을 만든다.")
-        print("잠시 뒤 다시 실행할 것 (--max-stores 로 나눠 받는 중).")
-        return
-
     draw_list = sorted(draws.values(), key=lambda d: d["round"])
     all_stores = [s for r in sorted(stores) for s in stores[r]]
+    complete = remaining == 0
 
-    problems = validate(draw_list, all_stores, previous_latest)
+    problems = validate(draw_list, all_stores, previous_latest,
+                        stores_complete=complete, latest=latest)
     if problems:
         fail(problems)
 
-    write_outputs(draw_list, all_stores, stores, latest)
-    print(f"\n완료: {len(draw_list)}회차 / 판매점 {len(all_stores)}건 → {DATA}")
+    # 백필 진행 중이라도 당첨번호는 저장한다 — 진행 상황을 눈으로 볼 수 있게.
+    write_outputs(draw_list, all_stores, stores, latest, complete)
+
+    if complete:
+        print(f"\n완료: {len(draw_list)}회차 / 판매점 {len(all_stores)}건 → {DATA}")
+    else:
+        print(f"\n당첨번호 {len(draw_list)}회차 저장 완료.")
+        print(f"판매점 {remaining}개 회차가 남았다 (통계·랭킹은 전량 수집 후 생성).")
+        print("잠시 뒤 다시 실행할 것.")
 
 
 if __name__ == "__main__":

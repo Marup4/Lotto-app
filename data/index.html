@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>로또 데이터 점검</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#666; --line:#e5e5e5; --card:#fafafa; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161616; --fg:#eee; --muted:#999; --line:#2e2e2e; --card:#1f1f1f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--fg);
+         font:15px/1.6 system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:24px; }
+  section { border:1px solid var(--line); border-radius:10px; padding:16px;
+            margin-bottom:16px; background:var(--card); }
+  h2 { font-size:15px; margin:0 0 12px; }
+  .balls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .ball { width:38px; height:38px; border-radius:50%; display:grid; place-items:center;
+          color:#fff; font-weight:700; font-size:15px; }
+  .y{background:#fbc400}.b{background:#69c8f2}.r{background:#ff7272}
+  .g{background:#aaa}.gr{background:#b0d840}
+  .plus { color:var(--muted); font-size:18px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .scroll { overflow-x:auto; }
+  .bar { height:8px; background:#69c8f2; border-radius:4px; }
+  .warn { color:#c0392b; }
+  .ok { color:#218c5a; }
+  .note { font-size:12px; color:var(--muted); margin-top:8px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(52px,1fr)); gap:6px; }
+  .cell { text-align:center; font-size:11px; color:var(--muted); }
+  .cell b { display:block; font-size:13px; color:var(--fg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>로또 데이터 점검</h1>
+  <div class="sub">배치가 만든 정적 JSON을 그대로 읽어 보여준다. 앱이 아니라 <b>데이터 검수용</b>이다.</div>
+  <div id="app">불러오는 중…</div>
+</div>
+
+<script>
+const $ = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d.firstElementChild; };
+const won = (n) => n == null ? '-' : n.toLocaleString('ko-KR') + '원';
+const ballClass = (n) => n <= 10 ? 'y' : n <= 20 ? 'b' : n <= 30 ? 'r' : n <= 40 ? 'g' : 'gr';
+
+async function getJSON(path) {
+  const r = await fetch(path + '?t=' + Date.now());
+  if (!r.ok) throw new Error(path + ' → HTTP ' + r.status);
+  return r.json();
+}
+
+function sectionLatest(d) {
+  const balls = d.numbers.map(n => `<div class="ball ${ballClass(n)}">${n}</div>`).join('');
+  return `<section>
+    <h2>최신 회차 — ${d.round}회 (${d.date})</h2>
+    <div class="balls">${balls}<span class="plus">+</span>
+      <div class="ball ${ballClass(d.bonus)}">${d.bonus}</div></div>
+    <table style="margin-top:12px">
+      <tr><th>1등 당첨자</th><td class="num">${d.firstWinners}명</td>
+          <th>1인당 당첨금</th><td class="num">${won(d.firstAmount)}</td></tr>
+      <tr><th>총 판매금액</th><td class="num">${won(d.totalSales)}</td>
+          <th>자동/수동/반자동</th><td class="num">${d.winAuto} / ${d.winManual} / ${d.winSemi}</td></tr>
+    </table>
+    <div class="note">자동+수동+반자동 = ${d.winAuto + d.winManual + d.winSemi},
+      1등 당첨자 = ${d.firstWinners}
+      ${d.winAuto + d.winManual + d.winSemi === d.firstWinners
+        ? '<span class="ok">일치</span>' : '<span class="warn">불일치 — 확인 필요</span>'}</div>
+  </section>`;
+}
+
+function sectionManifest(m, draws) {
+  return `<section>
+    <h2>수집 현황</h2>
+    <table>
+      <tr><th>최신 회차</th><td class="num">${m.latestRound}</td></tr>
+      <tr><th>당첨번호 회차 수</th><td class="num">${m.totalRounds}</td></tr>
+      <tr><th>판매점 보유 회차 수</th><td class="num">${m.storeRounds.length}</td></tr>
+      <tr><th>회차 연속성</th><td>${
+        draws.length && draws[draws.length-1].round - draws[0].round + 1 === draws.length
+          ? '<span class="ok">1회차부터 빠짐없이 연속</span>'
+          : '<span class="warn">누락된 회차가 있다</span>'}</td></tr>
+    </table>
+  </section>`;
+}
+
+function sectionRanking(rank) {
+  if (!rank || !rank.length) return '';
+  const rows = rank.slice(0, 20).map((r, i) => `<tr>
+      <td class="num">${i + 1}</td><td>${r.name}</td><td>${r.address}</td>
+      <td class="num">${r.count}회</td><td class="num">${r.latestRound}회</td>
+      <td>${Object.entries(r.byMethod).map(([k, v]) => k + ' ' + v).join(', ')}</td>
+    </tr>`).join('');
+  return `<section>
+    <h2>역대 1등 배출 상위 매장 (TOP 20)</h2>
+    <div class="scroll"><table>
+      <tr><th>#</th><th>매장명</th><th>주소</th><th>배출</th><th>최근</th><th>자동/수동</th></tr>
+      ${rows}
+    </table></div>
+    <div class="note"><b>여기를 봐주세요:</b> 같은 매장이 두 줄로 쪼개져 있으면
+      ltShpId가 불안정하다는 뜻이다. 그런 줄이 보이면 알려줄 것.</div>
+  </section>`;
+}
+
+function sectionStats(s) {
+  if (!s) return '';
+  const freq = s.frequency;
+  const max = Math.max(...Object.values(freq));
+  const cells = Object.keys(freq).sort((a, b) => a - b).map(n => `
+    <div class="cell"><b>${n}</b>${freq[n]}
+      <div class="bar" style="width:${Math.round(freq[n] / max * 100)}%"></div></div>`).join('');
+  const m = s.method;
+  const tot = m.자동 + m.수동 + m.반자동;
+  return `<section>
+    <h2>번호별 전체 출현 횟수</h2>
+    <div class="grid">${cells}</div>
+    <h2 style="margin-top:20px">1등 자동/수동 비율</h2>
+    <table>
+      <tr><th>자동</th><td class="num">${m.자동}건 (${(m.자동 / tot * 100).toFixed(1)}%)</td></tr>
+      <tr><th>수동</th><td class="num">${m.수동}건 (${(m.수동 / tot * 100).toFixed(1)}%)</td></tr>
+      <tr><th>반자동</th><td class="num">${m.반자동}건 (${(m.반자동 / tot * 100).toFixed(1)}%)</td></tr>
+    </table>
+    <div class="note">집계 구간: <b>${m.fromRound}회차 이후</b> (${m.coveredRounds}개 회차).
+      그 이전 회차는 원본에 자동/수동 값이 없다 — 앱에서도 이 문구를 고지해야 한다.</div>
+  </section>`;
+}
+
+(async () => {
+  const app = document.getElementById('app');
+  try {
+    const [manifest, draws] = await Promise.all([
+      getJSON('manifest.json'), getJSON('draws.json')
+    ]);
+    // 파생 파일은 전량 수집이 끝나야 생긴다
+    const stats = await getJSON('stats.json').catch(() => null);
+    const rank = await getJSON('store-ranking.json').catch(() => null);
+
+    const latest = draws[draws.length - 1];
+    app.innerHTML = sectionLatest(latest) + sectionManifest(manifest, draws)
+                  + sectionRanking(rank) + sectionStats(stats);
+  } catch (e) {
+    app.innerHTML = `<section><h2 class="warn">데이터를 읽지 못했다</h2>
+      <div>${e.message}</div>
+      <div class="note">배치를 아직 안 돌렸거나(<code>python build.py</code>),
+        파일 경로에서 직접 열어 fetch가 막힌 경우다.
+        <code>python -m http.server</code> 로 띄워서 볼 것.</div></section>`;
+  }
+})();
+</script>
+</body>
+</html>

@@ -29,13 +29,24 @@ API가 또 바뀌면 `/lt645/result` 와 `/wnprchsplcsrch/home` 의 HTML에서
 
 ## 배치 실행
 
+PowerShell에서 `run.ps1` 로 다 된다.
+
+```powershell
+.\run.ps1 test       # 유닛 테스트
+.\run.ps1 check      # 동행복권 접속 가능 여부 (차단됐는지 확인)
+.\run.ps1 collect    # 최초 백필 — 판매점 150회차씩. 여러 번 반복 실행
+.\run.ps1 status     # 현재 수집 상태
+.\run.ps1 view       # 브라우저로 데이터 점검 화면
+.\run.ps1 update     # 주간 증분 갱신
+```
+
+직접 실행하려면:
+
 ```bash
 cd batch
 python -m venv ../.venv && ../.venv/Scripts/pip install -r requirements.txt
-
-python -m pytest -q                        # 유닛 테스트
-python build.py --max-stores 200           # 최초 수집 — 나눠서 여러 번 (아래 경고)
-python build.py                            # 증분 갱신 (신규 회차만, 요청 1~2회)
+python -m pytest -q
+python build.py --max-stores 150 --delay 1.2
 ```
 
 검증에 실패하면 `exit 1`로 죽는다. 빈 파일을 성공으로 배포하지 않기 위함이다.

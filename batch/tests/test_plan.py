@@ -12,8 +12,14 @@ def test_two_requests_cover_twenty_rounds():
     assert plan_rounds(20) == [6, 16]
 
 
-def test_partial_window_still_gets_a_request():
-    assert plan_rounds(15) == [6, 16]
+def test_never_asks_for_a_round_beyond_the_latest():
+    # srchLtEpsd가 최신 회차를 넘으면 API가 빈 배열을 돌려준다.
+    # 그대로 두면 마지막 몇 회차가 조용히 누락된다 (실제로 1231~1235가 빠졌다).
+    assert all(a <= 1235 for a in plan_rounds(1235))
+
+
+def test_partial_window_clamps_the_last_anchor():
+    assert plan_rounds(15) == [6, 15]
 
 
 def test_every_round_up_to_latest_is_covered():

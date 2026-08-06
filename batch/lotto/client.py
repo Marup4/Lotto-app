@@ -42,13 +42,16 @@ def plan_rounds(latest):
 
     6, 16, 26… 을 요청하면 1-10, 11-20, 21-30… 이 정확히 맞아떨어진다.
     1,235회차 기준 124회 요청이면 전 회차가 채워진다.
+
+    최신 회차를 넘는 앵커는 요청하면 안 된다 — API가 빈 배열을 돌려주므로
+    마지막 몇 회차가 조용히 누락된다. 마지막 앵커는 latest로 눌러 담는다.
     """
     anchors = []
     anchor = WINDOW // 2 + 1          # 6 → 1~10
     while anchor - WINDOW // 2 <= latest:
-        anchors.append(anchor)
+        anchors.append(min(anchor, latest))
         anchor += WINDOW
-    return anchors
+    return sorted(set(anchors))
 
 
 class DhLottery:

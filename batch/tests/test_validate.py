@@ -73,6 +73,35 @@ def test_round_with_winners_but_no_stores_is_a_problem():
     assert any("300" in p and "판매점" in p for p in problems)
 
 
+def test_missing_tail_rounds_are_a_problem():
+    # 앵커가 최신 회차를 넘어가면 API가 빈 배열을 주고 꼬리가 잘린다.
+    # 중간 누락만 보는 검사로는 이걸 못 잡는다 (실제로 못 잡았다).
+    draws = [draw(r) for r in range(1, 1231)]
+
+    problems = validate(draws, [store(r) for r in range(1, 1231)],
+                        previous_latest=None, latest=1235)
+
+    assert any("1235" in p and "1230" in p for p in problems)
+
+
+def test_no_problem_when_collection_reaches_the_latest_round():
+    draws = [draw(1), draw(2)]
+
+    assert validate(draws, [store(1), store(2)],
+                    previous_latest=None, latest=2) == []
+
+
+def test_store_completeness_is_not_checked_during_a_partial_collection():
+    # 나눠 받는 중에는 아직 안 받은 회차가 당연히 비어 있다.
+    # 이걸 실패로 잡으면 백필을 끝낼 수 없다.
+    draws = [draw(300, auto=5), draw(301, auto=3)]
+
+    problems = validate(draws, [store(300)], previous_latest=None,
+                        stores_complete=False)
+
+    assert problems == []
+
+
 def test_round_with_zero_winners_needs_no_stores():
     # 289·295회처럼 1등이 0명인 회차는 판매점도 0건이 정상이다
     draws = [draw(295, auto=0, manual=0, semi=0, winners=0)]
