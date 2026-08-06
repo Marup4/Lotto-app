@@ -17,3 +17,10 @@ key.properties
 
 # AdMob 운영 광고 ID 등
 .env
+
+# Flutter (Week 2)
+app/build/
+app/.dart_tool/
+app/.flutter-plugins*
+app/.idea/
+app/*.iml
