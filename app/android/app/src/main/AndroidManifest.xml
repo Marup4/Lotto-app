@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 용지 QR 스캔용. 촬영물은 저장하거나 전송하지 않고 그 자리에서
+         해석만 한다. Play Console 데이터 안전 섹션에 이대로 신고할 것. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
-        android:label="lotto_app"
+        android:label="로또 번호 확인"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

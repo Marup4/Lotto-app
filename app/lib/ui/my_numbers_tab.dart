@@ -6,6 +6,7 @@ import '../domain/match_result.dart';
 import '../domain/my_numbers.dart';
 import '../domain/prize.dart';
 import 'number_grid.dart';
+import 'ticket_check_page.dart';
 
 /// ② 내 번호 탭 (설계 문서 §8).
 ///
@@ -64,6 +65,23 @@ class _MyNumbersTabState extends State<MyNumbersTab> {
     return Scaffold(
       body: Column(
         children: [
+          // 매주 산 용지는 저장할 대상이 아니다. 찍고 확인하면 끝나는
+          // 일회성 흐름을 고정번호 목록과 분리해 위에 둔다.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => TicketCheckPage(draws: widget.draws),
+                ),
+              ),
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('용지 QR로 바로 확인'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(46),
+              ),
+            ),
+          ),
           _RoundBar(
             draws: widget.draws,
             selected: _round,
