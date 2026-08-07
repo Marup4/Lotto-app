@@ -12,10 +12,14 @@ class NumberGrid extends StatelessWidget {
     super.key,
     required this.selection,
     required this.onToggle,
+    this.max = NumberSelection.max,
   });
 
   final NumberSelection selection;
   final ValueChanged<int> onToggle;
+
+  /// 고를 수 있는 최대 개수. null이면 제한이 없다 (제외 번호 지정 등).
+  final int? max;
 
   @override
   Widget build(BuildContext context) {
@@ -31,12 +35,13 @@ class NumberGrid extends StatelessWidget {
       itemBuilder: (context, i) {
         final n = i + 1;
         final picked = selection.contains(n);
+        // 상한을 채운 뒤에는 고르지 않은 칸을 눌러도 소용없다.
+        // 눌리지 않는다는 것을 흐리게 표시해 알려준다.
+        final full = max != null && selection.numbers.length >= max!;
         return _GridCell(
           number: n,
           picked: picked,
-          // 여섯 개를 채운 뒤에는 고르지 않은 칸을 눌러도 소용없다.
-          // 눌리지 않는다는 것을 흐리게 표시해 알려준다.
-          enabled: picked || !selection.isComplete,
+          enabled: picked || !full,
           onTap: () => onToggle(n),
         );
       },

@@ -7,6 +7,22 @@ import '../domain/prize.dart';
 import '../domain/ticket.dart';
 import 'number_grid.dart';
 
+/// 앱이 담고 있지 않은 회차의 용지를 찍었을 때 보여줄 말.
+///
+/// "없는 회차"라고만 하면 고장으로 보인다. 오래된 용지라면
+/// **당첨금 지급 기한(1년)이 지나 수령 자체가 불가능하다**는 것이
+/// 사용자에게 훨씬 쓸모 있는 정보다.
+String outOfRangeMessage(int round, List<Draw> draws) {
+  final oldest = draws.first.round;
+  final newest = draws.last.round;
+  final range = '이 앱은 $oldest~$newest회를 확인할 수 있습니다.';
+
+  if (round < oldest) {
+    return '$round회는 당첨금 지급 기한(1년)이 지난 회차입니다. $range';
+  }
+  return '$round회 자료가 아직 없습니다. $range';
+}
+
 /// QR로 읽은 용지를 그 자리에서 확인한다. 저장하지 않는다.
 ///
 /// 매주 5~10장을 사는 사람에게 번호를 일일이 넣고 나중에 지우게 하는 것은
@@ -45,8 +61,7 @@ class _TicketCheckPageState extends State<TicketCheckPage> {
         if (ticket == null) {
           _warning = '로또 용지의 QR이 아닙니다';
         } else if (_drawFor(ticket.round) == null) {
-          // 번들된 최근 회차 밖이면 대조할 데이터가 없다
-          _warning = '${ticket.round}회차는 이 앱에 없는 회차입니다';
+          _warning = outOfRangeMessage(ticket.round!, widget.draws);
         } else {
           _warning = null;
           _scanned.insert(0, ticket);

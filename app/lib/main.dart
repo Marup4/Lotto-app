@@ -4,6 +4,7 @@ import 'data/draw_repository.dart';
 import 'domain/draw.dart';
 import 'ui/draw_tab.dart';
 import 'ui/my_numbers_tab.dart';
+import 'ui/recommend_tab.dart';
 
 void main() => runApp(const LottoApp());
 
@@ -60,6 +61,7 @@ class _HomePageState extends State<HomePage> {
           return switch (_tab) {
             0 => DrawTab(draws: draws),
             1 => MyNumbersTab(draws: draws),
+            2 => RecommendTab(draws: draws),
             _ => const _ComingSoon(),
           };
         },
