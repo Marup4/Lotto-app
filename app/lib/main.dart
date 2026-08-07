@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'data/draw_repository.dart';
 import 'domain/draw.dart';
 import 'ui/draw_tab.dart';
+import 'ui/my_numbers_tab.dart';
 
 void main() => runApp(const LottoApp());
 
@@ -41,7 +42,28 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('로또 번호 확인')),
-      body: _tab == 0 ? _buildDrawTab() : const _ComingSoon(),
+      // 탭을 오갈 때 데이터를 다시 읽지 않도록 한 번 만든 Future를 재사용한다.
+      body: FutureBuilder<List<Draw>>(
+        future: _draws,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            // 설계 원칙: 에러 화면으로 사용자를 막지 않는다.
+            return Center(
+              child: Text('데이터를 읽지 못했습니다\n${snapshot.error}',
+                  textAlign: TextAlign.center),
+            );
+          }
+          final draws = snapshot.data;
+          if (draws == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return switch (_tab) {
+            0 => DrawTab(draws: draws),
+            1 => MyNumbersTab(draws: draws),
+            _ => const _ComingSoon(),
+          };
+        },
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
@@ -61,23 +83,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildDrawTab() {
-    return FutureBuilder<List<Draw>>(
-      future: _draws,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          // 설계 원칙: 에러 화면으로 사용자를 막지 않는다.
-          return Center(child: Text('데이터를 읽지 못했습니다\n${snapshot.error}',
-              textAlign: TextAlign.center));
-        }
-        final draws = snapshot.data;
-        if (draws == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        return DrawTab(draws: draws);
-      },
-    );
-  }
 }
 
 class _ComingSoon extends StatelessWidget {

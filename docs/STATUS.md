@@ -25,7 +25,14 @@ Week 0 완료 · Week 1 코드 완료(백필 50%) · **Week 2 진행 중 — ①
 - 최신 회차 **1235** (2026-08-01)
 - 당첨번호 **1235 / 1235 회차** — 누락 없음
 - 판매점 **503개 회차 남음** — `.\run.ps1 collect` 약 4회 더 (최신 회차부터 받는다)
-- 테스트 **84개** (배치 57 + 앱 27) 전부 통과, `flutter analyze` 무결점
+- 테스트 **109개** (배치 57 + 앱 52) 전부 통과, `flutter analyze` 무결점
+
+### 로컬 저장은 SQLite 대신 shared_preferences
+
+설계 문서 §9는 `drift`(SQLite)를 지정했으나, 앱이 실제로 저장하는 것은
+**내 번호 몇 세트뿐**이다. 판매점·통계는 배치가 미리 계산해 작은 JSON으로
+주므로 앱에서 쿼리할 일이 없다. drift는 코드 생성까지 끌고 들어오는 데 비해
+얻는 게 없어 보류했다. ⑤ 판매점 탭에서 복잡한 조회가 필요해지면 그때 올린다.
 
 ### 앱 번들 회차를 100회로 정한 근거
 
@@ -69,7 +76,12 @@ app/lib/
   domain/prize.dart      등수 판정 (테스트 10개, 2등/3등 경계 집중)
   domain/draw.dart       회차 모델 + 볼 색상 구간
   data/draw_repository.dart  번들 에셋 로딩
+  domain/my_numbers.dart     저장 번호 모델 + 1~45 선택 상태
+  domain/match_result.dart   회차 대조 결과 (맞은 번호/보너스/등수)
+  data/my_numbers_repository.dart  shared_preferences 영속화
   ui/draw_tab.dart       ① 당첨번호 탭 (회차 선택기 + 스와이프)
+  ui/my_numbers_tab.dart ② 내 번호 탭 (그리드 입력·저장·자동 판정)
+  ui/number_grid.dart    1~45 그리드, 맞은 번호 강조 행
   ui/ball.dart           번호 볼
   ui/format.dart         금액 축약 표기
   main.dart              하단 5탭 (②~⑤는 "준비 중" 자리표시)
@@ -81,9 +93,8 @@ app/lib/
 
 ## 다음에 할 일
 
-1. **② 내 번호 탭** — 등수 판정 로직은 이미 완성·검증됨. 1–45 그리드 입력 UI와
-   저장(drift), 신규 회차 자동 재판정만 붙이면 된다
-   (① 탭의 회차 선택기는 2026-08-07 완료)
+1. ~~② 내 번호 탭~~ **완료 (2026-08-07)** — 그리드 입력, 저장, 자동 판정,
+   대조 회차 변경, 삭제까지. 실기기 확인 완료
 2. **③ 번호 추천 탭** — 여기까지가 설계 문서의 "출시 가능한 상태"
 3. ④ 통계 / ⑤ 판매점·랭킹 — **백필 완료 후에 착수**
 4. 릴리스 서명 설정 (아래 함정 참조)
@@ -137,6 +148,10 @@ app/lib/
   Write/Edit 도구는 BOM을 안 붙이므로 수정할 때마다 다시 붙일 것
 - PowerShell `>` 리디렉션은 바이너리를 망친다 (스크린샷 등은 Bash에서)
 - `flutter install`은 기본으로 release를 찾는다. `--debug` 명시 필요
+- **이 PC에서 Kotlin 증분 컴파일이 깨진다.** 플러그인을 추가하면
+  "Could not close incremental caches ... .tab" 으로 빌드가 실패하며
+  `flutter clean` 으로도 안 낫는다. `android/gradle.properties`에
+  `kotlin.incremental=false` 를 넣어 우회했다. 지우지 말 것
 - Android Studio가 `D:\Dev\AS_Studio`에 있어 `flutter doctor` 요약에 안 뜬다.
   정상 인식 중이니 문제 아님
 
