@@ -6,6 +6,7 @@
 
 
 from lotto.stats import method_breakdown_sum, method_data_start
+from lotto.store_era import has_store_data
 
 
 def validate(draws, stores, previous_latest, stores_complete=True, latest=None):
@@ -48,7 +49,10 @@ def validate(draws, stores, previous_latest, stores_complete=True, latest=None):
                     f"{d['round']}회차 자동/수동 합({method_breakdown_sum(d)})이 "
                     f"1등 당첨자 수({d['firstWinners']})와 다르다"
                 )
-        if (stores_complete and d["firstWinners"] > 0
+        # 261회차 이하는 동행복권이 판매점을 공개하지 않는다. 0건이 정상이며,
+        # 이걸 문제로 잡으면 250개 회차가 걸려 배치가 영구히 exit 1 한다.
+        if (stores_complete and has_store_data(d["round"])
+                and d["firstWinners"] > 0
                 and stores_by_round.get(d["round"], 0) == 0):
             problems.append(
                 f"{d['round']}회차는 1등 당첨자가 {d['firstWinners']}명인데 판매점이 0건이다"

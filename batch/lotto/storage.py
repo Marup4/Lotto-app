@@ -7,7 +7,12 @@ import hashlib
 import json
 from pathlib import Path
 
-DATA = Path(__file__).resolve().parent.parent.parent / "data"
+ROOT = Path(__file__).resolve().parent.parent.parent
+DATA = ROOT / "data"
+
+# 앱에 번들되는 사본. data/draws.json과 어긋나면 낡은 데이터가 그대로 출시되므로
+# 배치가 직접 갱신한다 (설계 문서 §13-3 오프라인 우선).
+APP_ASSET_DRAWS = ROOT / "app" / "assets" / "data" / "draws.json"
 
 
 def store_path(round_no):

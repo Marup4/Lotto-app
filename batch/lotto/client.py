@@ -32,6 +32,10 @@ HEADERS = {
 NETWORK_ERRORS = (requests.exceptions.ConnectionError,
                   requests.exceptions.Timeout)
 
+# 5xx는 서버 쪽 일시 장애다. 502 하나로 주간 갱신이 죽으면 안 된다.
+# 4xx는 우리가 잘못 부른 것이므로 재시도해도 소용없다 — 즉시 죽는 게 낫다.
+RETRIABLE_STATUS = range(500, 600)
+
 
 class SiteUnreachable(RuntimeError):
     """재시도를 다 쓰고도 동행복권에 닿지 못했다."""
@@ -123,11 +127,15 @@ class DhLottery:
                 r = self.session.get(f"{BASE}{path}", params=params, timeout=30)
                 r.raise_for_status()
                 return r.json()["data"]
-            except NETWORK_ERRORS as e:
-                if attempt == self.MAX_ATTEMPTS:
+            except (NETWORK_ERRORS + (requests.exceptions.HTTPError,)) as e:
+                status = getattr(getattr(e, "response", None), "status_code", None)
+                fatal = (isinstance(e, requests.exceptions.HTTPError)
+                         and status is not None
+                         and status not in RETRIABLE_STATUS)
+                if fatal or attempt == self.MAX_ATTEMPTS:
                     raise
                 wait = self.backoff * attempt
-                print(f"    연결 끊김({e.__class__.__name__}) — "
+                print(f"    요청 실패({e.__class__.__name__}) — "
                       f"{wait:.0f}초 후 재시도 {attempt}/{self.MAX_ATTEMPTS - 1}",
                       flush=True)
                 time.sleep(wait)
@@ -155,20 +163,40 @@ class DhLottery:
                           "srchShpLctn": ""})
         return data.get("list") or []
 
-    def latest_round(self, hint=1235):
-        """존재하는 최대 회차를 이분 탐색한다.
+    def _round_exists(self, round_no):
+        """해당 회차가 실제로 존재하는가.
 
-        회차는 단조 증가하므로 hint 이상만 살펴보면 된다.
-        hint가 맞으면 몇 번의 요청으로 끝난다.
+        응답이 비어 있지 않은 것만으로 판단하면 안 된다 — 창(N-5~N+4)이
+        겹쳐서 앞쪽 회차만 걸릴 수 있다. 요청한 회차 자신이 목록에
+        들어 있는지 봐야 한다.
         """
-        lo = hint if self.draws_around(hint) else 1
-        hi = lo
-        while self.draws_around(hi + WINDOW):
+        if round_no < 1:
+            return False
+        return any(d["ltEpsd"] == round_no for d in self.draws_around(round_no))
+
+    def latest_round(self, hint=1235):
+        """존재하는 최대 회차를 찾는다.
+
+        hint에서 출발해 위아래로 창 단위로 훑어 탐색 구간을 좁힌 뒤
+        이분 탐색한다. hint가 근처이면 몇 번의 요청으로 끝나고,
+        빗나가도 1회차부터 훑지 않는다 — 요청이 많아지면 IP 차단 위험이 커진다.
+        """
+        # lo = 존재가 확인된 회차, hi = 존재하지 않는 회차.
+        # 답은 항상 [lo, hi) 안에 있다.
+        lo = max(hint, 1)
+        while lo > 1 and not self._round_exists(lo):
+            lo -= WINDOW
+        lo = max(lo, 1)
+
+        hi = lo + WINDOW
+        while self._round_exists(hi):
             hi += WINDOW
-        while lo < hi:
-            mid = (lo + hi + 1) // 2
-            if any(d["ltEpsd"] == mid for d in self.draws_around(mid)):
+
+        # lo와 hi 사이를 좁혀 '존재하는 마지막 회차'를 찾는다.
+        while lo < hi - 1:
+            mid = (lo + hi) // 2
+            if self._round_exists(mid):
                 lo = mid
             else:
-                hi = mid - 1
+                hi = mid
         return lo

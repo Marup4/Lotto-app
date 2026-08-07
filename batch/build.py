@@ -17,7 +17,7 @@ from lotto.client import DhLottery, SiteUnreachable
 from lotto.collect import collect_draws, collect_stores
 from lotto.ranking import build_ranking
 from lotto.stats import build_stats_payload
-from lotto.storage import DATA, load_json, write_json
+from lotto.storage import APP_ASSET_DRAWS, DATA, load_json, write_json
 from lotto.validate import validate
 
 RECENT_WINDOW = 50      # draws-latest.json에 담을 회차 수
@@ -58,6 +58,10 @@ def write_outputs(draw_list, all_stores, stores, latest, complete):
         "draws-latest.json": write_json(
             DATA / "draws-latest.json", draw_list[-RECENT_WINDOW:]),
     }
+    # 앱 번들 사본도 함께 갱신한다. 수동 복사에 의존하면 잊고 빌드했을 때
+    # 낡은 데이터가 조용히 출시된다.
+    if APP_ASSET_DRAWS.parent.exists():
+        write_json(APP_ASSET_DRAWS, draw_list)
     if complete:
         files["stats.json"] = write_json(
             DATA / "stats.json", build_stats_payload(draw_list))

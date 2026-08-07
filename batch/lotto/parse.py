@@ -5,10 +5,13 @@ def parse_store(raw, round_no):
     return {
         "round": round_no,
         "shopId": raw["ltShpId"],
-        "name": raw["shpNm"],
+        # 실제로 매장명이 비어 있는 레코드가 있다 (578회). 앱에 "null"이
+        # 찍히지 않도록 여기서 막는다.
+        "name": raw["shpNm"] or "이름 미상",
         "address": " ".join(raw["shpAddr"].split()),
-        "sido": raw["tm1ShpLctnAddr"],
-        "sigungu": raw["tm2ShpLctnAddr"],
+        # 지역 필터가 null을 만나면 드롭다운이 깨진다 (572회 시군구 결측).
+        "sido": raw["tm1ShpLctnAddr"] or "",
+        "sigungu": raw["tm2ShpLctnAddr"] or "",
         "method": raw["atmtPsvYnTxt"],
         "tel": raw["shpTelno"],
         "lat": raw["shpLat"],

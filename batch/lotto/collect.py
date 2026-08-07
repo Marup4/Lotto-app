@@ -6,6 +6,7 @@
 from lotto.client import plan_rounds
 from lotto.parse import parse_draw, parse_store
 from lotto.storage import load_json, store_path, write_json
+from lotto.store_era import has_store_data
 
 
 def collect_draws(api, latest, known):
@@ -35,6 +36,27 @@ def collect_draws(api, latest, known):
     return draws
 
 
+def rounds_needing_stores(draws, cached):
+    """실제로 요청해야 하는 회차를 최신순으로 돌려준다.
+
+    요청할 필요가 없는 경우가 셋 있다.
+      - 이미 받아둔 회차 (cached)
+      - 261회차 이하 — 동행복권이 공개하지 않는다. 요청해도 항상 빈 응답이라
+        IP 차단 예산만 낭비한다
+      - 1등 당첨자가 0명인 회차 (289·295 등)
+
+    최신순인 이유: 백필을 도중에 멈춰도 사용자가 실제로 보는 최근 회차부터
+    쓸 수 있어야 한다. 설계 문서 §13-3의 '판매점 최근 100회차 번들링'과도 맞다.
+    """
+    return sorted(
+        (d["round"] for d in draws.values()
+         if d["round"] not in cached
+         and has_store_data(d["round"])
+         and d["firstWinners"] > 0),
+        reverse=True,
+    )
+
+
 def collect_stores(api, draws, max_requests=None):
     """1등 판매점을 회차별로 받아 즉시 파일로 떨어뜨린다.
 
@@ -45,20 +67,20 @@ def collect_stores(api, draws, max_requests=None):
     반환: {회차: [판매점, …]} 와 남은 회차 수
     """
     stores = {}
-    todo = []
+    cached_rounds = set()
 
     for d in sorted(draws.values(), key=lambda x: x["round"]):
         r = d["round"]
-        cached = store_path(r)
-        if cached.exists():
-            stores[r] = load_json(cached, [])
-        elif d["firstWinners"] == 0:
-            # 289·295회처럼 1등이 0명인 회차가 실제로 있다. 요청할 필요가 없다.
+        path = store_path(r)
+        if path.exists():
+            stores[r] = load_json(path, [])
+            cached_rounds.add(r)
+        elif not has_store_data(r) or d["firstWinners"] == 0:
+            # 요청할 이유가 없는 회차. 빈 값으로 확정해 캐시에 남긴다.
             stores[r] = []
-            write_json(cached, [])
-        else:
-            todo.append(r)
+            write_json(path, [])
 
+    todo = rounds_needing_stores(draws, cached_rounds)
     if not todo:
         print("  판매점: 최신 상태")
         return stores, 0
