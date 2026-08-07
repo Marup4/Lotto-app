@@ -2,8 +2,14 @@ name: 주간 데이터 갱신
 
 on:
   schedule:
-    # 토 19:00 UTC = 일 04:00 KST. 추첨(토 20:45 KST) 후 약 7시간.
-    - cron: '0 19 * * 6'
+    # 추첨은 토 20:45 KST. 그때부터 당첨번호를 빨리 잡는 것이 목적이다.
+    # 일요일 새벽에 한 번만 돌리면 토요일 밤에 확인하려는 사용자를 놓친다.
+    #
+    # 토 12:00~13:59 UTC = 21:00~22:59 KST, 20분 간격
+    - cron: '*/20 12-13 * * 6'
+    # 일 00:00·03:00 UTC = 09:00·12:00 KST.
+    # 당첨금과 1등 판매점은 추첨 직후엔 확정되지 않아 나중에 채워진다.
+    - cron: '0 0,3 * * 0'
   workflow_dispatch:
 
 permissions:
@@ -42,20 +48,26 @@ jobs:
         run: python build.py --delay 1.0
 
       - name: 변경분 커밋
+        id: commit
         run: |
           git config user.name  "lotto-data-bot"
           git config user.email "actions@github.com"
           git add data
           if git diff --staged --quiet; then
             echo "변경 없음 — 신규 회차가 아직 없는 것으로 보인다"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "data: $(date -u +%Y-%m-%d) 주간 갱신"
+          git commit -m "data: $(date -u +%Y-%m-%dT%H:%M) 갱신"
           git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
 
-  # Pages 배포는 data/ 가 갱신된 뒤에만 돈다
+  # 추첨일에는 20분마다 도므로, 바뀐 게 있을 때만 배포한다.
   deploy:
     needs: update
+    if: needs.update.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       pages: write

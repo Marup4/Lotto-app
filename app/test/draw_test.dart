@@ -28,6 +28,18 @@ void main() {
     expect(d.totalSales, 115445069000);
   });
 
+  test('JSON으로 왕복해도 값이 유지된다', () {
+    // 내려받은 회차를 기기에 보관했다가 다시 읽는 경로에서 쓴다
+    final restored = Draw.fromJson(Draw.fromJson(raw).toJson());
+
+    expect(restored.round, 1235);
+    expect(restored.date, DateTime(2026, 8, 1));
+    expect(restored.numbers, [6, 7, 11, 15, 39, 43]);
+    expect(restored.bonus, 20);
+    expect(restored.totalSales, 115445069000);
+    expect(restored.winAuto, 7);
+  });
+
   test('번호는 오름차순으로 정렬해 내놓는다', () {
     final d = Draw.fromJson({...raw, 'numbers': [43, 6, 39, 7, 15, 11]});
 

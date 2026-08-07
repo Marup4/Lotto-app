@@ -47,6 +47,29 @@ class Draw {
       winSemi: json['winSemi'] as int? ?? 0,
     );
   }
+
+  /// 내려받은 회차를 기기에 보관할 때 쓴다. 배치가 내보내는 형식과 같다.
+  Map<String, dynamic> toJson() => {
+        'round': round,
+        'date': '${date.year.toString().padLeft(4, '0')}-'
+            '${date.month.toString().padLeft(2, '0')}-'
+            '${date.day.toString().padLeft(2, '0')}',
+        'numbers': numbers,
+        'bonus': bonus,
+        'firstWinners': firstWinners,
+        'firstAmount': firstAmount,
+        'totalSales': totalSales,
+        'winAuto': winAuto,
+        'winManual': winManual,
+        'winSemi': winSemi,
+      };
+
+  /// 당첨금·판매금액이 아직 확정되지 않은 상태.
+  ///
+  /// 추첨 직후에는 당첨번호만 나오고 집계는 나중에 채워진다.
+  /// 1등이 실제로 0명인 회차(289·295)도 총 판매금액은 정상값을 가지므로,
+  /// 그걸로 '집계 전'과 '당첨자 없음'을 구분한다.
+  bool get isSettled => totalSales > 0;
 }
 
 /// 번호 볼 색상 구간 (설계 문서 §7 F1).

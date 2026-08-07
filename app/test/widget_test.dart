@@ -50,6 +50,51 @@ void main() {
     expect(onPage('1,154억 4,506만원'), findsOneWidget);
   });
 
+  testWidgets('추첨 직후 집계 전에는 0원이 아니라 집계 중으로 보여준다', (tester) async {
+    // 배치가 추첨 직후부터 20분 간격으로 받아오므로, 당첨번호만 있고
+    // 당첨금·판매금액이 아직 안 채워진 상태가 실제로 화면에 온다.
+    final justDrawn = Draw(
+      round: 1236,
+      date: DateTime(2026, 8, 8),
+      numbers: const [6, 7, 11, 15, 39, 43],
+      bonus: 20,
+      firstWinners: 0,
+      firstAmount: 0,
+      totalSales: 0,
+      winAuto: 0,
+      winManual: 0,
+      winSemi: 0,
+    );
+
+    await pumpTab(tester, [justDrawn]);
+
+    expect(onPage('0원'), findsNothing);
+    expect(onPage('집계 중'), findsWidgets);
+    // 당첨번호는 나왔으니 공은 그대로 보여준다
+    expect(onPage('43'), findsOneWidget);
+  });
+
+  testWidgets('1등이 실제로 0명인 회차는 0명으로 보여준다', (tester) async {
+    // 289·295회처럼 진짜 0명인 회차가 있다. 총 판매금액이 있으면 확정된 것이다.
+    final noWinner = Draw(
+      round: 289,
+      date: DateTime(2008, 6, 14),
+      numbers: const [1, 2, 3, 4, 5, 6],
+      bonus: 7,
+      firstWinners: 0,
+      firstAmount: 0,
+      totalSales: 39406643000,
+      winAuto: 0,
+      winManual: 0,
+      winSemi: 0,
+    );
+
+    await pumpTab(tester, [noWinner]);
+
+    expect(onPage('0명'), findsOneWidget);
+    expect(onPage('집계 중'), findsNothing);
+  });
+
   testWidgets('자동수동 값이 없는 옛 회차는 그 줄을 감춘다', (tester) async {
     // 261회차 이하는 원본에 값이 없다. 0/0/0을 보여주면 오해를 준다.
     final old = Draw(

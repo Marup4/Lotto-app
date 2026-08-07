@@ -20,14 +20,16 @@ from lotto.stats import build_stats_payload
 from lotto.storage import APP_ASSET_DRAWS, DATA, load_json, write_json
 from lotto.validate import validate
 
-RECENT_WINDOW = 50      # draws-latest.json에 담을 회차 수
 RANKING_LIMIT = 50      # 매장 랭킹 TOP N
 DEFAULT_HINT = 1235     # 최신 회차 탐색 시작점 (2026-08-06 기준)
 
-# 앱에 번들할 회차 수 (설계 문서 §13-3).
+# 앱이 쓰는 회차 수 (설계 문서 §13-3).
 # 로또 당첨금 지급 기한은 지급개시일로부터 1년(약 52회차)이다. 그보다 오래된
 # 회차는 내 번호를 대조할 실익이 없다. 지급 기한을 두 배 여유로 덮는 선.
 # 통계 탭은 stats.json(전 회차 사전 계산)을 쓰므로 이 값과 무관하다.
+#
+# 앱 번들과 동기화용 draws-latest.json이 **같은 내용**이어야 한다.
+# 둘이 어긋나면 갱신 후 회차 수가 들쭉날쭉해진다. 그래서 상수 하나로 묶는다.
 APP_BUNDLE_ROUNDS = 100
 
 
@@ -59,15 +61,18 @@ def write_outputs(draw_list, all_stores, stores, latest, complete):
     complete=False(백필 진행 중)면 당첨번호까지만 쓴다. 통계와 랭킹은
     판매점이 전량 모여야 의미가 있으므로 만들지 않는다.
     """
+    # 앱이 내려받는 파일. 회차가 늘면 창이 통째로 밀린다
+    # (1136~1235 → 1137~1236). 18KB뿐이라 증분 계산보다 통째 교체가 싸다.
+    recent = draw_list[-APP_BUNDLE_ROUNDS:]
+
     files = {
         "draws.json": write_json(DATA / "draws.json", draw_list),
-        "draws-latest.json": write_json(
-            DATA / "draws-latest.json", draw_list[-RECENT_WINDOW:]),
+        "draws-latest.json": write_json(DATA / "draws-latest.json", recent),
     }
-    # 앱 번들 사본도 함께 갱신한다. 수동 복사에 의존하면 잊고 빌드했을 때
-    # 낡은 데이터가 조용히 출시된다. 전 회차가 아니라 최근 구간만 담는다.
+    # 앱 번들 사본도 같은 내용으로 갱신한다. 수동 복사에 의존하면
+    # 잊고 빌드했을 때 낡은 데이터가 조용히 출시된다.
     if APP_ASSET_DRAWS.parent.exists():
-        write_json(APP_ASSET_DRAWS, draw_list[-APP_BUNDLE_ROUNDS:])
+        write_json(APP_ASSET_DRAWS, recent)
     if complete:
         files["stats.json"] = write_json(
             DATA / "stats.json", build_stats_payload(draw_list))

@@ -184,13 +184,24 @@ class _Facts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = <(String, String)>[
-      ('1등 당첨금', formatWon(draw.firstAmount)),
-      ('1등 당첨자', '${draw.firstWinners}명'),
-      ('총 판매금액', formatWon(draw.totalSales)),
-      if (draw.winAuto + draw.winManual + draw.winSemi > 0)
-        ('자동/수동/반자동', '${draw.winAuto} / ${draw.winManual} / ${draw.winSemi}'),
-    ];
+    // 추첨 직후에는 당첨번호만 나오고 집계는 나중에 채워진다.
+    // 그때 "0원"을 보여주면 사실과 다르다.
+    final rows = draw.isSettled
+        ? <(String, String)>[
+            ('1등 당첨금', formatWon(draw.firstAmount)),
+            ('1등 당첨자', '${draw.firstWinners}명'),
+            ('총 판매금액', formatWon(draw.totalSales)),
+            if (draw.winAuto + draw.winManual + draw.winSemi > 0)
+              (
+                '자동/수동/반자동',
+                '${draw.winAuto} / ${draw.winManual} / ${draw.winSemi}'
+              ),
+          ]
+        : const <(String, String)>[
+            ('1등 당첨금', '집계 중'),
+            ('1등 당첨자', '집계 중'),
+            ('총 판매금액', '집계 중'),
+          ];
 
     return Column(
       children: [
