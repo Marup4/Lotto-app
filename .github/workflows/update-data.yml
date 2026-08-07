@@ -45,10 +45,22 @@ jobs:
         working-directory: batch
         # 검증 실패 시 build.py가 exit 1 → 이 스텝이 빨갛게 죽는다.
         # 빈 파일을 성공으로 배포하는 일은 없다.
-        run: python build.py --delay 1.0
+        #
+        # --max-stores로 한 번에 받는 양을 묶는다. 상한 없이 돌렸더니 백필
+        # 잔량 503회차를 한 번에 긁다가 14분 만에 죽었다(run #1). 이유가 둘이다.
+        #   - 요청이 촘촘하게 몰리면 동행복권이 IP를 막는다
+        #   - 토요일 cron이 20분 간격이라 실행이 서로 겹친다
+        # 백필이 끝나면 신규 회차 1개뿐이라 이 상한은 걸리지 않는다.
+        run: python build.py --delay 1.0 --max-stores 120
 
       - name: 변경분 커밋
         id: commit
+        # 수집이 실패해도 커밋한다. collect_stores는 회차를 받는 즉시 파일로
+        # 떨어뜨리므로, 도중에 죽어도 그때까지 모은 판매점 캐시는 유효하다.
+        # 이걸 버리면 다음 실행이 같은 지점에서 또 죽어 백필이 영영 안 끝난다.
+        # 검증 실패 시에는 write_outputs가 아예 호출되지 않으므로
+        # draws.json·manifest.json은 손대지 않는다 — 잘못된 배포는 여전히 막힌다.
+        if: always()
         run: |
           git config user.name  "lotto-data-bot"
           git config user.email "actions@github.com"
