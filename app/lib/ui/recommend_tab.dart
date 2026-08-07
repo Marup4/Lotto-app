@@ -4,7 +4,9 @@ import '../data/my_numbers_repository.dart';
 import '../domain/draw.dart';
 import '../domain/my_numbers.dart';
 import '../domain/recommender.dart';
+import '../domain/statistics.dart';
 import 'ball.dart';
+import 'disclaimer.dart';
 import 'number_grid.dart';
 
 /// ③ 번호 추천 탭 (설계 문서 §8).
@@ -34,15 +36,8 @@ class _RecommendTabState extends State<RecommendTab> {
   bool _saved = false;
 
   /// 번들된 회차에서 센 출현 횟수. 설명에 회차 수를 그대로 밝힌다.
-  late final Map<int, int> _frequency = () {
-    final counts = {for (var n = 1; n <= 45; n++) n: 0};
-    for (final d in widget.draws) {
-      for (final n in d.numbers) {
-        counts[n] = counts[n]! + 1;
-      }
-    }
-    return counts;
-  }();
+  /// ④ 통계 탭과 같은 계산을 써야 두 화면의 수치가 어긋나지 않는다.
+  late final Map<int, int> _frequency = frequency(widget.draws);
 
   void _generate() {
     setState(() {
@@ -121,7 +116,11 @@ class _RecommendTabState extends State<RecommendTab> {
           _Result(numbers: _result!, saved: _saved, onSave: _save),
         ],
         const SizedBox(height: 28),
-        const _Disclaimer(),
+        const Disclaimer(
+          '지난 회차의 출현 빈도는 다음 추첨 결과와 아무런 관계가 없습니다. '
+          '모든 번호의 당첨 확률은 같습니다. 이 기능은 번호를 고르는 재미를 '
+          '위한 것입니다.',
+        ),
       ],
     );
   }
@@ -276,28 +275,6 @@ class _Result extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// 설계 문서 §7 F3·§12가 요구하는 고정 안내.
-class _Disclaimer extends StatelessWidget {
-  const _Disclaimer();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        '지난 회차의 출현 빈도는 다음 추첨 결과와 아무런 관계가 없습니다. '
-        '모든 번호의 당첨 확률은 같습니다. 이 기능은 번호를 고르는 재미를 '
-        '위한 것입니다.',
-        style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
       ),
     );
   }

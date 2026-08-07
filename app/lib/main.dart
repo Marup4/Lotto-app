@@ -5,6 +5,7 @@ import 'domain/draw.dart';
 import 'ui/draw_tab.dart';
 import 'ui/my_numbers_tab.dart';
 import 'ui/recommend_tab.dart';
+import 'ui/stats_tab.dart';
 
 void main() => runApp(const LottoApp());
 
@@ -26,7 +27,7 @@ class LottoApp extends StatelessWidget {
 }
 
 /// 하단 탭 5개 (설계 문서 §8).
-/// ①만 구현돼 있고 나머지는 순차 착수한다.
+/// ⑤ 판매점만 남았다 — 판매점 백필이 끝나 착수 가능하다.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -62,6 +63,7 @@ class _HomePageState extends State<HomePage> {
             0 => DrawTab(draws: draws),
             1 => MyNumbersTab(draws: draws),
             2 => RecommendTab(draws: draws),
+            3 => StatsTab(draws: draws),
             _ => const _ComingSoon(),
           };
         },
