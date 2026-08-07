@@ -17,20 +17,24 @@ Week 0·1·2 완료 — **설계 문서의 다섯 탭이 모두 구현됐고 실
 | 패키지명 | `com.lottolite.app` | Play 등록 후 영구 고정 |
 | Flutter 프로젝트명 | `lotto_app` | Dart 패키지명. applicationId와 별개 |
 | minSdk | 26 (Android 8) | |
-| 번들 데이터 | **당첨번호 최근 100회차** (약 18KB) | 설계 문서 §13-3 (2026-08-07 변경) |
-| 저장소 | https://github.com/Marup4/Lotto-app | main 브랜치 |
-| 앱 표시 이름 | **미정** | 출시 전까지 변경 가능하므로 급하지 않음 |
+| 번들 데이터 | 당첨번호 100회차 18KB + 매장 랭킹 12KB + 최근 10회차 판매점 32KB | 설계 문서 §13-3. 배치가 직접 갱신한다 |
+| 저장소 | https://github.com/Marup4/Lotto-app | main 브랜치 · **공개** |
+| 앱 표시 이름 | **미정** (현재 `로또 번호 확인`) | 다음 세션 과제 |
 
 ## 현재 수치 (2026-08-07)
 
 - 최신 회차 **1235** (2026-08-01)
 - 당첨번호 **1235 / 1235 회차** — 누락 없음
 - 판매점 **1235 / 1235 회차 — 백필 완료.** manifest `complete: true`
-- `stats.json` · `store-ranking.json` **최초 생성됨** — ④·⑤ 탭의 재료가 준비됐다
 - 테스트 **215개** (배치 72 + 앱 143) 전부 통과, `flutter analyze` 무결점
-- ✅ **GitHub Pages 가동 중** — 아래 4개 모두 200
-  `manifest.json` · `draws-latest.json` · `stats.json` · `store-ranking.json`
-  (`https://marup4.github.io/Lotto-app/…`)
+- ✅ **GitHub Pages 가동 중** — `https://marup4.github.io/Lotto-app/…`
+- ⚠️ **다만 서버 파일이 낡았다.** 마지막 배포(run #3) 이후 데이터를 커밋만
+  하고 워크플로를 돌리지 않았다. 지금 서버에는
+  `store-ranking.json`이 **옛 형식**(온라인 포함 단일 배열)으로 있고
+  `recent-stores.json`은 **404**다.
+  → 앱은 이 상황을 안전하게 넘긴다. 형식이 안 맞으면 예외를 삼키고 번들본을
+    쓴다(§5-② 확인됨). **다음 세션에서 워크플로를 한 번 돌리면 해소된다.**
+  → 토요일 cron이 먼저 돌면 그때 자동으로 맞춰진다
 - 저장소를 **공개로 전환**했다. 무료 플랜에서는 비공개 저장소로 Pages를 쓸 수
   없다("the repository must be public"). 어차피 앱이 인증 없이 JSON을
   받아가므로 데이터는 공개일 수밖에 없고, 비공개로 지킬 실익은 코드뿐이었다.
@@ -141,7 +145,33 @@ app/lib/
 
 ---
 
-## 다음에 할 일
+## 다음 세션은 여기서 시작한다
+
+기능 개발은 끝났다. 남은 것은 출시 준비와 검증이다.
+
+1. **워크플로 한 번 돌리기** — 서버 파일이 낡았다(위 '현재 수치' 참조).
+   `Actions` → `주간 데이터 갱신` → `Run workflow`. 1~2분이면 끝난다
+2. **앱 표시 이름 확정** — 현재 `로또 번호 확인`.
+   `app/android/app/src/main/AndroidManifest.xml`의 `android:label`
+3. **아이콘/스플래시** — 지금은 Flutter 기본 아이콘이다
+4. **릴리스 서명 설정** — 아래 함정 참조. **AAB 업로드의 전제 조건이다**
+5. **API 26 AVD 생성** — minSdk 26 호환성은 실기기(Android 15)로 검증 불가
+6. **Play Console 개발자 등록 · 도박 정책 확인 · AdMob · 개인정보처리방침**
+
+### 토요일에 저절로 검증되는 것
+
+1236회차가 나오면 **한 번도 실제로 돌아본 적 없는 경로**가 처음 동작한다.
+결과를 꼭 확인할 것.
+
+- 배치 cron이 추첨 직후 신규 회차를 잡는가
+- 앱이 `manifest.json`을 보고 `draws-latest.json`을 받아 창을 미는가
+  (1136~1235 → 1137~1236)
+- **집계 전 회차의 판매점이 일요일에 제대로 채워지는가** — 2026-08-07에
+  고친 버그다(아래 함정 참조). 여기가 틀어지면 랭킹이 그때부터 멈춘다
+
+---
+
+## 지나온 길 (완료)
 
 1. ~~② 내 번호 탭~~ **완료 (2026-08-07)** — 그리드 입력, 저장, 자동 판정,
    대조 회차 변경, 삭제까지. 실기기 확인 완료
@@ -163,8 +193,6 @@ app/lib/
      못한 것이다. **지킬 수 없는 약속은 하지 않는다** (사용자 제안)
    - 지도는 안 붙였다. 좌표(`lat`/`lon`)는 랭킹 JSON에 이미 담아뒀으므로
      지도 SDK와 API 키만 있으면 배치를 다시 손대지 않고 얹을 수 있다
-5. 릴리스 서명 설정 (아래 함정 참조)
-6. AdMob, 아이콘/스플래시, 개인정보처리방침, 내부 테스트 트랙
 
 ---
 
@@ -264,6 +292,25 @@ http://qr.dhlottery.co.kr/?v=1234q020709131430q050820222526…187712019714800177
   `kotlin.incremental=false` 를 넣어 우회했다. 지우지 말 것
 - Android Studio가 `D:\Dev\AS_Studio`에 있어 `flutter doctor` 요약에 안 뜬다.
   정상 인식 중이니 문제 아님
+- **Git Bash가 `/sdcard` 같은 경로를 멋대로 바꾼다** (`/Files/Git/sdcard`).
+  adb에 절대경로를 넘길 땐 `MSYS_NO_PATHCONV=1`을 주거나 Windows 경로로 쓸 것
+- **파이썬으로 JSON을 읽을 땐 `encoding='utf-8'`을 명시할 것.**
+  Windows 기본이 cp949라 한글이 든 파일에서 `UnicodeDecodeError`가 난다.
+  콘솔 출력도 깨지므로, 확인용 출력은 파일로 쓰고 `cat`으로 볼 것
+
+### Flutter 테스트
+
+- ⚠️ **`http.Response(문자열, 200)`은 기본 인코딩이 latin1이다.** 한글이 든
+  응답을 흉내 내면 `Invalid argument (string)`으로 죽는다.
+  `http.Response.bytes(utf8.encode(json), 200)`을 쓸 것 — 실제 서버와도 같다
+- ⚠️ **로딩 스피너가 있는 화면에 `pumpAndSettle`을 쓰면 타임아웃이다.**
+  `CircularProgressIndicator`는 무한 애니메이션이라 영영 '정지'하지 않는다.
+  `tester.pump(Duration(...))`로 필요한 만큼만 넘길 것
+- ⚠️ **`testWidgets` 안에서 저장소를 그냥 `await` 하면 교착된다.**
+  SharedPreferences·rootBundle은 플랫폼 채널을 쓰는데 그 응답은 테스트
+  프레임이 돌아야 처리된다. `tester.runAsync(() => repo.load())`로 감쌀 것
+- **`ListView`는 화면 밖 항목을 만들지 않는다.** 세로로 긴 화면(통계·판매점)은
+  `tester.view.physicalSize`를 키워야 아래쪽 위젯을 찾을 수 있다
 
 ---
 
@@ -289,9 +336,14 @@ release {
 - [x] GitHub Pages 소스를 Actions로 설정 — 완료. 저장소도 공개로 전환
 - [x] **매장 랭킹 육안 확인** — 2026-08-07 완료. 쪼개진 줄 없음.
       `ltShpId`로 묶는 방식이 실데이터로 검증됐다 (§11의 마지막 데이터 리스크)
+- [ ] **워크플로 한 번 실행** — 서버 파일이 낡았다 (가장 먼저 할 것)
+      `Actions` → `주간 데이터 갱신` → `Run workflow`
 - [ ] Secrets에 `DATA_PAT` 등록 (없으면 60일 뒤 cron 자동 중지).
-      등록하면 워크플로 수동 실행도 API로 걸 수 있어 편해진다
+      등록하면 워크플로 수동 실행도 API로 걸 수 있어 내가 대신 돌릴 수 있다
 - [ ] Google Play 도박 정책 확인, AdMob 계정, Play Console 개발자 등록
+
+**워크플로 실행은 내가 못 한다.** GitHub API로 걸려면 토큰이 필요한데
+이 PC에 `gh` CLI도 토큰도 없다. `DATA_PAT`을 등록하면 그때부터는 가능하다.
 
 ### 에뮬레이터
 
@@ -313,9 +365,23 @@ release {
 
 cd app
 flutter test
+flutter analyze
 flutter build apk --debug
 flutter install --debug -d R3CR505Q4QV
 ```
 
-앱 에셋(`app/assets/data/draws.json`)은 배치가 자동으로 함께 갱신하므로
-수동 복사가 필요 없다.
+앱 에셋 3개(`app/assets/data/`)는 배치가 자동으로 함께 갱신하므로
+수동 복사가 필요 없다 — `draws.json` · `store-ranking.json` · `recent-stores.json`.
+
+폰에 직접 띄우고 화면을 캡처할 때 (Bash):
+
+```bash
+ADB=/c/Users/HA/AppData/Local/Android/Sdk/platform-tools/adb.exe
+$ADB shell am start -n com.lottolite.app/com.lottolite.lotto_app.MainActivity
+$ADB exec-out screencap -p > shot.png
+```
+
+액티비티 이름이 `applicationId`와 다르다 (`com.lottolite.lotto_app.MainActivity`).
+`.MainActivity`로 부르면 "does not exist"가 난다.
+하단 탭 좌표는 1080x2400 기준 y=2160, x는 `폭*(n-0.5)/5`.
+**화면 잠금이 풀려 있어야 한다** — 잠겨 있으면 캡처가 검은 화면만 나온다.
