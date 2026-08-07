@@ -36,8 +36,12 @@ void main() {
     expect(message, isNot(contains('지급 기한')));
   });
 
-  test('앱이 확인할 수 있는 범위를 함께 알려준다', () {
-    expect(outOfRangeMessage(1122, bundled), contains('1136'));
-    expect(outOfRangeMessage(1122, bundled), contains('1235'));
+  test('확인 가능한 범위는 회차 번호가 아니라 개수로 알려준다', () {
+    // 사용자에게 "1136~1235회"는 외울 수도 가늠할 수도 없는 숫자다.
+    // "최근 100회차"가 훨씬 직관적이다.
+    final message = outOfRangeMessage(1122, bundled);
+
+    expect(message, contains('최근 100회차'));
+    expect(message, isNot(contains('1136')));
   });
 }

@@ -13,11 +13,10 @@ import 'number_grid.dart';
 /// **당첨금 지급 기한(1년)이 지나 수령 자체가 불가능하다**는 것이
 /// 사용자에게 훨씬 쓸모 있는 정보다.
 String outOfRangeMessage(int round, List<Draw> draws) {
-  final oldest = draws.first.round;
-  final newest = draws.last.round;
-  final range = '이 앱은 $oldest~$newest회를 확인할 수 있습니다.';
+  // "1136~1235회"는 외울 수도 가늠할 수도 없는 숫자다. 개수로 말한다.
+  final range = '이 앱은 최근 ${draws.length}회차를 확인할 수 있습니다.';
 
-  if (round < oldest) {
+  if (round < draws.first.round) {
     return '$round회는 당첨금 지급 기한(1년)이 지난 회차입니다. $range';
   }
   return '$round회 자료가 아직 없습니다. $range';
