@@ -24,6 +24,12 @@ RECENT_WINDOW = 50      # draws-latest.json에 담을 회차 수
 RANKING_LIMIT = 50      # 매장 랭킹 TOP N
 DEFAULT_HINT = 1235     # 최신 회차 탐색 시작점 (2026-08-06 기준)
 
+# 앱에 번들할 회차 수 (설계 문서 §13-3).
+# 로또 당첨금 지급 기한은 지급개시일로부터 1년(약 52회차)이다. 그보다 오래된
+# 회차는 내 번호를 대조할 실익이 없다. 지급 기한을 두 배 여유로 덮는 선.
+# 통계 탭은 stats.json(전 회차 사전 계산)을 쓰므로 이 값과 무관하다.
+APP_BUNDLE_ROUNDS = 100
+
 
 def parse_args():
     ap = argparse.ArgumentParser(description="로또 데이터 배치")
@@ -59,9 +65,9 @@ def write_outputs(draw_list, all_stores, stores, latest, complete):
             DATA / "draws-latest.json", draw_list[-RECENT_WINDOW:]),
     }
     # 앱 번들 사본도 함께 갱신한다. 수동 복사에 의존하면 잊고 빌드했을 때
-    # 낡은 데이터가 조용히 출시된다.
+    # 낡은 데이터가 조용히 출시된다. 전 회차가 아니라 최근 구간만 담는다.
     if APP_ASSET_DRAWS.parent.exists():
-        write_json(APP_ASSET_DRAWS, draw_list)
+        write_json(APP_ASSET_DRAWS, draw_list[-APP_BUNDLE_ROUNDS:])
     if complete:
         files["stats.json"] = write_json(
             DATA / "stats.json", build_stats_payload(draw_list))

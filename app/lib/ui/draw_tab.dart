@@ -23,6 +23,14 @@ class _DrawTabState extends State<DrawTab> {
   // draws는 오름차순이지만 화면은 최신부터 보여준다.
   // 페이지 0 = 최신 회차이므로 왼쪽으로 밀면 과거로 간다.
   final _controller = PageController();
+  int _page = 0;
+
+  /// 페이지 인덱스 → 회차 (0이 최신).
+  Draw _drawAt(int page) => widget.draws[widget.draws.length - 1 - page];
+
+  /// 회차 → 페이지 인덱스.
+  int _pageOf(int round) =>
+      widget.draws.length - 1 - widget.draws.indexWhere((d) => d.round == round);
 
   @override
   void dispose() {
@@ -30,13 +38,88 @@ class _DrawTabState extends State<DrawTab> {
     super.dispose();
   }
 
+  void _jumpTo(int round) {
+    // 멀리 떨어진 회차로 애니메이션하면 중간 페이지가 전부 스쳐 지나가
+    // 느리고 산만하다. 곧바로 이동한다.
+    _controller.jumpToPage(_pageOf(round));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return PageView.builder(
-      controller: _controller,
-      itemCount: widget.draws.length,
-      itemBuilder: (context, i) =>
-          _DrawPage(draw: widget.draws[widget.draws.length - 1 - i]),
+    return Column(
+      children: [
+        _RoundPicker(
+          draws: widget.draws,
+          selected: _drawAt(_page).round,
+          onSelected: _jumpTo,
+        ),
+        Expanded(
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: widget.draws.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (context, i) => _DrawPage(draw: _drawAt(i)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 회차 선택기 (설계 문서 §7 F1).
+///
+/// 스와이프만으로는 과거 회차에 닿기까지 너무 많이 넘겨야 한다.
+/// 화면 제목을 겸하므로 크게 쓴다 — 눌러서 바꿀 수 있다는 것도 함께 드러난다.
+/// 최신 회차가 위로 오도록 역순으로 나열한다.
+class _RoundPicker extends StatelessWidget {
+  const _RoundPicker({
+    required this.draws,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<Draw> draws;
+  final int selected;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final titleStyle = Theme.of(context)
+        .textTheme
+        .headlineMedium
+        ?.copyWith(fontWeight: FontWeight.bold);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: DropdownButton<int>(
+          value: selected,
+          underline: const SizedBox.shrink(),
+          borderRadius: BorderRadius.circular(12),
+          iconSize: 30,
+          style: titleStyle,
+          // 펼쳐진 목록은 촘촘해야 여러 회차가 한눈에 들어온다.
+          selectedItemBuilder: (context) => [
+            for (final d in draws.reversed)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('${d.round}회', style: titleStyle),
+              ),
+          ],
+          items: [
+            for (final d in draws.reversed)
+              DropdownMenuItem(
+                value: d.round,
+                child: Text('${d.round}회',
+                    style: Theme.of(context).textTheme.bodyLarge),
+              ),
+          ],
+          onChanged: (round) {
+            if (round != null) onSelected(round);
+          },
+        ),
+      ),
     );
   }
 }
@@ -58,10 +141,7 @@ class _DrawPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${draw.round}회',
-              style: theme.textTheme.headlineMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
+          // 회차 번호는 선택기가 겸한다 (중복 표기 방지).
           Text('$_dateText 추첨', style: theme.textTheme.bodyMedium),
           const SizedBox(height: 28),
           _Numbers(draw: draw),
