@@ -1,4 +1,4 @@
-from lotto.ranking import build_ranking
+from lotto.ranking import build_ranking, build_ranking_payload
 
 
 def store(round_no, shop_id, name="가게", method="자동", address="서울 강남구 어디로 1"):
@@ -57,3 +57,49 @@ def test_ties_are_broken_by_most_recent_round():
     stores = [store(5, "OLD"), store(99, "NEW")]
 
     assert [r["shopId"] for r in build_ranking(stores, limit=10)] == ["NEW", "OLD"]
+
+
+def online(round_no, method="자동"):
+    """동행복권 온라인 구매. 실물 매장이 아니다 (2026-08-07 실측 118건)."""
+    return {
+        "round": round_no, "shopId": "51100000",
+        "name": "인터넷 복권판매사이트", "address": "동행복권(dhlottery.co.kr)",
+        "sido": "서울", "sigungu": "서초구", "method": method,
+        "tel": None, "lat": 0.0, "lon": 0.0,
+    }
+
+
+def test_online_channel_is_kept_out_of_the_store_ranking():
+    # 온라인은 2위(51회)의 두 배 넘게 1등을 내므로 그냥 두면 랭킹을 지배한다.
+    # '찾아갈 수 있는 명당' 목록이라는 성격이 무너진다.
+    stores = [online(1), online(2), online(3), store(4, "A")]
+
+    ranking = build_ranking(stores, limit=10)
+
+    assert [r["shopId"] for r in ranking] == ["A"]
+
+
+def test_online_channel_is_reported_separately():
+    stores = [online(1, "자동"), online(2, "수동"), store(3, "A")]
+
+    payload = build_ranking_payload(stores, limit=10)
+
+    assert payload["online"]["count"] == 2
+    assert payload["online"]["byMethod"] == {"자동": 1, "수동": 1}
+    assert [r["shopId"] for r in payload["stores"]] == ["A"]
+
+
+def test_online_is_null_when_absent():
+    # 온라인 판매 이전 회차만 모으면 없을 수 있다. 화면이 이걸 보고 갈라야 한다.
+    payload = build_ranking_payload([store(1, "A")], limit=10)
+
+    assert payload["online"] is None
+
+
+def test_online_is_detected_by_address_too():
+    # shopId가 재발급되어도 걸러져야 한다 — 랭킹 1위가 통째로 뒤집히는 사고다
+    renamed = online(1)
+    renamed["shopId"] = "99999999"
+
+    assert build_ranking([renamed, store(2, "A")], limit=10) == \
+        build_ranking([store(2, "A")], limit=10)

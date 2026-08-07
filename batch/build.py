@@ -15,7 +15,7 @@ import sys
 
 from lotto.client import DhLottery, SiteUnreachable
 from lotto.collect import collect_draws, collect_stores
-from lotto.ranking import build_ranking
+from lotto.ranking import build_ranking_payload
 from lotto.stats import build_stats_payload
 from lotto.storage import APP_ASSET_DRAWS, DATA, load_json, write_json
 from lotto.validate import validate
@@ -78,7 +78,7 @@ def write_outputs(draw_list, all_stores, stores, latest, complete):
             DATA / "stats.json", build_stats_payload(draw_list))
         files["store-ranking.json"] = write_json(
             DATA / "store-ranking.json",
-            build_ranking(all_stores, limit=RANKING_LIMIT))
+            build_ranking_payload(all_stores, limit=RANKING_LIMIT))
 
     write_json(DATA / "manifest.json", {
         "latestRound": latest,

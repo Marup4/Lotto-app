@@ -90,8 +90,16 @@ function sectionManifest(m, draws) {
   </section>`;
 }
 
-function sectionRanking(rank) {
-  if (!rank || !rank.length) return '';
+function sectionRanking(payload) {
+  if (!payload) return '';
+  // 온라인 구매는 랭킹에서 빼고 위에 따로 적는다 (2026-08-07 결정).
+  const rank = payload.stores || [];
+  const on = payload.online;
+  if (!rank.length) return '';
+  const online = on ? `<div class="note"><b>온라인 구매</b> —
+      1등 ${on.count}회 (최근 ${on.latestRound}회차).
+      ${Object.entries(on.byMethod).map(([k, v]) => k + ' ' + v).join(', ')}.
+      실물 매장이 아니라 아래 랭킹에서는 제외했다.</div>` : '';
   const rows = rank.slice(0, 20).map((r, i) => `<tr>
       <td class="num">${i + 1}</td><td>${r.name}</td><td>${r.address}</td>
       <td class="num">${r.count}회</td><td class="num">${r.latestRound}회</td>
@@ -99,6 +107,7 @@ function sectionRanking(rank) {
     </tr>`).join('');
   return `<section>
     <h2>역대 1등 배출 상위 매장 (TOP 20)</h2>
+    ${online}
     <div class="scroll"><table>
       <tr><th>#</th><th>매장명</th><th>주소</th><th>배출</th><th>최근</th><th>자동/수동</th></tr>
       ${rows}
