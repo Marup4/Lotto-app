@@ -36,6 +36,21 @@ def collect_draws(api, latest, known):
     return draws
 
 
+def is_settled_without_winner(draw):
+    """집계가 끝났는데 1등이 진짜 0명인 회차인가 (289·295 등).
+
+    `firstWinners == 0` 만으로 판단하면 안 된다. 추첨 직후에는 당첨번호만
+    나오고 집계는 나중에 채워지므로, 갓 추첨된 회차도 0명으로 보인다.
+    그걸 '1등 없음'으로 확정해 빈 파일을 캐시에 남기면, 당첨금이 확정된
+    뒤에도 다음 실행이 '이미 받았다'며 건너뛴다 — 신규 회차의 판매점이
+    영영 비게 되고 랭킹도 그때부터 멈춘다.
+
+    총 판매금액으로 둘을 가른다. 1등이 0명인 회차도 판매금액은 정상값이다.
+    앱의 `Draw.isSettled`와 같은 기준이다.
+    """
+    return draw["firstWinners"] == 0 and draw["totalSales"] > 0
+
+
 def rounds_needing_stores(draws, cached):
     """실제로 요청해야 하는 회차를 최신순으로 돌려준다.
 
@@ -75,10 +90,12 @@ def collect_stores(api, draws, max_requests=None):
         if path.exists():
             stores[r] = load_json(path, [])
             cached_rounds.add(r)
-        elif not has_store_data(r) or d["firstWinners"] == 0:
+        elif not has_store_data(r) or is_settled_without_winner(d):
             # 요청할 이유가 없는 회차. 빈 값으로 확정해 캐시에 남긴다.
             stores[r] = []
             write_json(path, [])
+        # 집계 전 회차는 아무것도 하지 않는다. 빈 파일을 남기면 다음 실행이
+        # '이미 받았다'고 보고 영영 건너뛴다 (아래 함수 주석 참조).
 
     todo = rounds_needing_stores(draws, cached_rounds)
     if not todo:

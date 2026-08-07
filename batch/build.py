@@ -16,8 +16,11 @@ import sys
 from lotto.client import DhLottery, SiteUnreachable
 from lotto.collect import collect_draws, collect_stores
 from lotto.ranking import build_ranking_payload
+from lotto.recent import build_recent_stores
 from lotto.stats import build_stats_payload
-from lotto.storage import APP_ASSET_DRAWS, DATA, load_json, write_json
+from lotto.storage import (APP_ASSET_DRAWS, APP_ASSET_RANKING,
+                           APP_ASSET_RECENT_STORES, DATA,
+                           load_json, write_json)
 from lotto.validate import validate
 
 RANKING_LIMIT = 50      # 매장 랭킹 TOP N
@@ -76,9 +79,20 @@ def write_outputs(draw_list, all_stores, stores, latest, complete):
     if complete:
         files["stats.json"] = write_json(
             DATA / "stats.json", build_stats_payload(draw_list))
+        ranking = build_ranking_payload(all_stores, limit=RANKING_LIMIT)
         files["store-ranking.json"] = write_json(
-            DATA / "store-ranking.json",
-            build_ranking_payload(all_stores, limit=RANKING_LIMIT))
+            DATA / "store-ranking.json", ranking)
+
+        # 최근 회차 1등 판매점. 매주 바뀌는 유일한 판매점 정보다.
+        recent_stores = build_recent_stores(stores)
+        files["recent-stores.json"] = write_json(
+            DATA / "recent-stores.json", recent_stores)
+
+        # 둘 다 앱에 번들한다. 합쳐 30KB뿐이고, 네트워크가 없어도
+        # ⑤ 탭이 빈 화면으로 보이지 않아야 한다.
+        if APP_ASSET_RANKING.parent.exists():
+            write_json(APP_ASSET_RANKING, ranking)
+            write_json(APP_ASSET_RECENT_STORES, recent_stores)
 
     write_json(DATA / "manifest.json", {
         "latestRound": latest,

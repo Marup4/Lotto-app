@@ -103,3 +103,14 @@ def test_online_is_detected_by_address_too():
 
     assert build_ranking([renamed, store(2, "A")], limit=10) == \
         build_ranking([store(2, "A")], limit=10)
+
+
+def test_carries_coordinates_for_a_future_map():
+    # 지도는 아직 안 붙였지만 좌표는 원본에 있다. 나중에 배치를 다시
+    # 돌리지 않아도 되도록 랭킹에 담아둔다.
+    s = store(1, "A")
+    s["lat"], s["lon"] = 37.5, 127.0
+
+    top = build_ranking([s], limit=10)[0]
+
+    assert (top["lat"], top["lon"]) == (37.5, 127.0)

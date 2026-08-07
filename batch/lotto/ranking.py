@@ -48,6 +48,10 @@ def _aggregate(stores):
             agg["address"] = s["address"]
             agg["sido"] = s["sido"]
             agg["sigungu"] = s["sigungu"]
+            # 지금 화면에는 안 쓴다. 나중에 지도를 붙일 때 배치를 다시
+            # 손대지 않아도 되도록 미리 담아둔다 — 50건이라 무게가 없다.
+            agg["lat"] = s["lat"]
+            agg["lon"] = s["lon"]
     return by_shop
 
 

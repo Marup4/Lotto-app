@@ -73,3 +73,20 @@ def test_parse_store_keeps_missing_phone_as_none():
     }
 
     assert parse_store(raw, round_no=1150)["tel"] is None
+
+
+def test_fixes_the_known_bad_region_label():
+    # 원본에 '전남광주 동구 충장로 73'이 실제로 들어 있다 (1234·1235회차).
+    # 광주광역시는 1986년에 전남에서 분리됐으므로 성립하지 않는 표기다.
+    from lotto.parse import fix_region
+
+    assert fix_region("전남광주 동구 충장로 73") == "광주 동구 충장로 73"
+    assert fix_region("전남광주") == "광주"
+
+
+def test_leaves_unknown_regions_alone():
+    # 모르는 값을 짐작해서 고치면 멀쩡한 주소를 망친다
+    from lotto.parse import fix_region
+
+    assert fix_region("전남 순천시 어디로 1") == "전남 순천시 어디로 1"
+    assert fix_region("") == ""

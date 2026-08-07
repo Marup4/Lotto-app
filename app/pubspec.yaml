@@ -60,11 +60,14 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # 전 회차 당첨번호를 앱에 번들링한다 (설계 문서 §13-3).
-  # 오프라인에서도 첫 화면이 즉시 뜨게 하기 위함. 약 216KB.
-  # 배치가 data/draws.json을 갱신하면 `.\run.ps1 sync-assets` 로 옮긴다.
+  # 오프라인에서도 첫 화면이 즉시 뜨게 하려고 번들한다 (설계 문서 §13-3).
+  # 최근 100회차 18KB + 매장 랭킹 12KB + 최근 10회차 판매점 32KB.
+  # 배치(build.py)가 data/를 쓸 때 이 사본까지 함께 갱신한다 —
+  # 수동 복사에 기대면 잊고 빌드했을 때 낡은 데이터가 조용히 출시된다.
   assets:
     - assets/data/draws.json
+    - assets/data/store-ranking.json
+    - assets/data/recent-stores.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
