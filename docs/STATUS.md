@@ -148,9 +148,30 @@ app/lib/
 1. **앱 표시 이름 확정** — 현재 `로또 번호 확인`.
    `app/android/app/src/main/AndroidManifest.xml`의 `android:label`
 2. **아이콘/스플래시** — 지금은 Flutter 기본 아이콘이다
-3. **릴리스 서명 설정** — 아래 함정 참조. **AAB 업로드의 전제 조건이다**
-4. **API 26 AVD 생성** — minSdk 26 호환성은 실기기(Android 15)로 검증 불가
+3. **API 26 AVD 생성** — minSdk 26 호환성은 실기기(Android 15)로 검증 불가.
+   **다른 사람에게 배포하기 전에 반드시 확인할 것** (사용자가 뒤로 미룸)
+4. **서명 키 비밀번호 교체** — 아래 참조. Play 등록 전에 할 것
 5. **Play Console 개발자 등록 · 도박 정책 확인 · AdMob · 개인정보처리방침**
+
+### 배포용 파일 뽑기
+
+```powershell
+cd d:\Dev\MProject\Lotto-app
+git pull                       # 번들 에셋을 최신 회차로 맞춘다
+cd app
+flutter build apk --release --split-per-abi   # 파일로 직접 배포 (arm64 22.8MB)
+flutter build appbundle --release             # Play 업로드용 AAB
+```
+
+- **`--split-per-abi` 를 쓸 것.** 안 쓰면 61MB다 — 그중 59MB가 ABI 3종의
+  네이티브 라이브러리인데 실기기는 하나만 쓴다. `x86_64`(22.5MB)는
+  에뮬레이터 전용이라 사람에게 줄 필요가 없다. 보통은 `arm64-v8a`를 준다
+- AAB는 Play가 기기별로 갈라주므로 이 옵션이 필요 없다
+- `--split-per-abi` 는 versionCode에 접두어를 붙인다(arm64 → 2001).
+  Play에 APK로 올릴 때만 신경 쓰면 되고, AAB를 쓰면 무관하다
+- **디버그 APK를 남에게 주지 말 것.** 193MB이고 `DEBUGGABLE`이며,
+  나중에 정식 서명 버전으로 업데이트가 안 된다(서명 불일치).
+  받은 사람이 앱을 지우고 새로 깔아야 하고 저장한 번호도 사라진다
 
 ### ✅ 무인 갱신 실증 완료 (2026-08-08, 1236회차)
 
@@ -337,19 +358,41 @@ http://qr.dhlottery.co.kr/?v=1234q020709131430q050820222526…187712019714800177
 
 ## 아직 막혀 있는 것
 
-### ⚠️ 릴리스 서명이 디버그 키다
+### ✅ 릴리스 서명 완료 (2026-08-08)
 
-`app/android/app/build.gradle.kts`:
+`app/android/key.properties`(저장소 제외)에서 키스토어 정보를 읽는다.
+파일이 없으면 디버그 키로 떨어지되 빌드 로그에 경고가 뜬다.
 
-```kotlin
-release {
-    signingConfig = signingConfigs.getByName("debug")   // flutter create 기본값
-}
+```
+app/android/lotto-release.jks     키스토어 (gitignore)
+app/android/key.properties        비밀번호 (gitignore)
+app/android/key.properties.example  형식 예시 (저장소에 있음)
 ```
 
-이 상태로 AAB를 만들면 **Play Console이 거부한다.** 출시 전 키스토어 생성 →
-`key.properties` 분리 → Play App Signing 등록이 필요하다.
-**키스토어를 잃으면 그 앱은 영원히 업데이트 불가다. 반드시 백업할 것.**
+- 서명 주체: `CN=Jongho HA, OU=HJH, O=HJH, C=KR` (apksigner로 대조 확인)
+- 설치된 앱에서 `DEBUGGABLE` 플래그가 사라진 것을 확인했다
+- **AAB도 같은 설정을 쓴다.** `flutter build appbundle` 한 줄이면 되고
+  Play 등록 시 추가 작업이 없다
+
+### 🔴 키스토어를 잃으면 앱은 영원히 업데이트 불가다
+
+Play에 한 번 올린 뒤에는 **같은 키로 서명한 버전만** 받아준다.
+잃으면 이름을 바꿔 새 앱으로 올리는 것 외에 방법이 없고 기존 사용자는
+따라오지 못한다. `.jks`와 비밀번호를 **이 PC 밖에** 백업할 것.
+
+### ⚠️ 서명 키 비밀번호가 6자리 숫자다
+
+키스토어 파일이 유출되면 몇 초 만에 뚫린다. 파일 자체는 gitignore로
+막혀 있으나, 클라우드 백업이나 실수로 새어나갈 여지는 남는다.
+**Play에 처음 올리기 전에** 바꾸는 것이 좋다 — 그 뒤에는 키를 못 바꾼다.
+
+```powershell
+cd d:\Dev\MProject\Lotto-app\app\android
+& "D:\Dev\AS_Studio\jbr\bin\keytool.exe" -storepasswd -keystore lotto-release.jks
+& "D:\Dev\AS_Studio\jbr\bin\keytool.exe" -keypasswd -keystore lotto-release.jks -alias lotto
+```
+
+바꾼 뒤 `key.properties`의 두 값도 함께 고칠 것.
 
 ### 사용자가 해야 하는 것 (내가 못 함)
 
