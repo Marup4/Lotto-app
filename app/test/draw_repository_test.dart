@@ -85,13 +85,20 @@ void main() {
     // 앱을 업데이트하면 번들에 더 최신 회차가 들어온다. 그런데 기기에는
     // 예전에 받아둔 캐시가 남아 있다. 오프라인 상태로 열면 캐시가
     // 이기면서 방금 설치한 새 데이터가 무시된다.
+    //
+    // 번들의 최신 회차를 숫자로 박지 않는다 — 배치가 매주 갱신하므로
+    // 추첨 때마다 테스트가 깨진다 (실제로 1236회차에서 깨졌다).
+    final bundleLatest =
+        (await DrawRepository(sync: DrawSync(client: deadServer)).loadAll())
+            .last
+            .round;
     SharedPreferences.setMockInitialValues({
-      'cached_draws': jsonEncode([drawJson(1000)]),
+      'cached_draws': jsonEncode([drawJson(bundleLatest - 200)]),
     });
 
     final draws = await DrawRepository(sync: DrawSync(client: deadServer))
         .loadAll();
 
-    expect(draws.last.round, 1235, reason: '번들(1235)이 캐시(1000)를 이겨야 한다');
+    expect(draws.last.round, bundleLatest, reason: '번들이 낡은 캐시를 이겨야 한다');
   });
 }

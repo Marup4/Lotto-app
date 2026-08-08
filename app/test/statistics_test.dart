@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,9 +26,12 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('실제 번들 데이터', () {
-    // 앱이 100회차만 갖고 계산해도 배치가 1235회차 전체로 낸 값과 같아야 한다.
+    // 앱이 100회차만 갖고 계산해도 배치가 전 회차로 낸 값과 같아야 한다.
     // 이게 깨지면 stats.json을 따로 내려받아야 한다는 신호다.
-    // 기대값 출처: data/stats.json (2026-08-07, 1235회차 기준)
+    //
+    // 기대값을 적어두지 않는다. 배치가 매주 데이터를 갱신하므로 숫자를
+    // 박아두면 추첨 때마다 테스트가 깨진다 — 실제로 1236회차에서 깨졌다.
+    // 대신 배치의 산출물(data/stats.json)과 직접 대조한다.
     Future<List<Draw>> bundle() async {
       final raw = await rootBundle.loadString('assets/data/draws.json');
       return [
@@ -36,10 +40,20 @@ void main() {
       ];
     }
 
-    test('미출현 TOP3가 전 회차 계산과 일치한다', () async {
-      final top = droughts(await bundle(), limit: 3);
+    /// 배치가 전 회차로 계산해둔 미출현 기간. 테스트는 저장소 안에서 도므로
+    /// 앱 에셋이 아닌 원본 파일을 직접 읽는다.
+    Map<int, int> batchDroughts() {
+      final raw = File('../data/stats.json').readAsStringSync();
+      final map = (jsonDecode(raw) as Map<String, dynamic>)['drought'] as Map;
+      return {
+        for (final e in map.entries) int.parse(e.key as String): e.value as int
+      };
+    }
 
-      expect([for (final d in top) (d.number, d.gap)], [(5, 22), (23, 19), (10, 18)]);
+    test('미출현 기간이 전 회차 계산과 45개 전부 일치한다', () async {
+      final mine = {for (final d in droughts(await bundle())) d.number: d.gap};
+
+      expect(mine, batchDroughts());
     });
 
     test('번들만으로도 미출현이 창 밖으로 나가지 않는다', () async {

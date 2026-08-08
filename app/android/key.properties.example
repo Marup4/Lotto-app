@@ -1,0 +1,20 @@
+# 릴리스 서명 설정 예시.
+#
+# 이 파일을 같은 폴더에 key.properties 로 복사하고 값을 채운다.
+# 실제 key.properties 와 *.jks 는 .gitignore 가 막고 있다 — 저장소에 올리지 말 것.
+#
+# ⚠️ 키스토어(.jks)와 비밀번호를 잃으면 그 앱은 **영원히 업데이트할 수 없다.**
+#    Play에 한 번 올린 뒤에는 같은 키로만 새 버전을 낼 수 있기 때문이다.
+#    저장소가 아닌 곳(비밀번호 관리자, 외장 드라이브)에 반드시 백업할 것.
+
+# 키스토어 파일 경로. android/ 폴더 기준 상대경로다.
+storeFile=lotto-release.jks
+
+# 키스토어 비밀번호
+storePassword=여기에_비밀번호
+
+# 키 별칭 (keytool -alias 로 준 값)
+keyAlias=lotto
+
+# 키 비밀번호. keytool 에서 별도로 주지 않았다면 storePassword 와 같다.
+keyPassword=여기에_비밀번호

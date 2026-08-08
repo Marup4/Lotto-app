@@ -73,7 +73,11 @@ jobs:
         run: |
           git config user.name  "lotto-data-bot"
           git config user.email "actions@github.com"
-          git add data
+          # 앱 번들 사본도 함께 커밋한다. build.py가 갱신해주는데 data/ 만
+          # 담으면 러너가 만든 사본이 버려져, 저장소의 번들이 배포본보다
+          # 계속 뒤처진다. 그 상태로 릴리스를 뽑으면 인터넷 없이 처음 켠
+          # 사용자에게 옛 회차가 보인다.
+          git add data app/assets/data
           if git diff --staged --quiet; then
             echo "변경 없음 — 신규 회차가 아직 없는 것으로 보인다"
             echo "changed=false" >> "$GITHUB_OUTPUT"
