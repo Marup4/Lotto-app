@@ -26,6 +26,13 @@ class StoresTab extends StatefulWidget {
   State<StoresTab> createState() => _StoresTabState();
 }
 
+/// 두 화면이 같은 안내를 쓴다 (설계 문서 §12).
+/// 두 벌로 두면 한쪽만 고쳐져 문구가 갈라진다.
+const _storeNotice = Disclaimer(
+  '많이 팔린 매장일수록 1등이 나올 기회도 많습니다. '
+  '어느 매장에서 사든 당첨 확률은 같습니다.',
+);
+
 enum _View { recent, allTime }
 
 class _StoresTabState extends State<StoresTab> {
@@ -134,10 +141,7 @@ class _RecentViewState extends State<_RecentView> {
         else
           for (final s in stores) _WinnerRow(store: s),
         const SizedBox(height: 24),
-        const Disclaimer(
-          '많이 팔린 매장일수록 1등이 나올 기회도 많습니다. '
-          '어느 매장에서 사든 당첨 확률은 같습니다.',
-        ),
+        _storeNotice,
       ],
     );
   }
@@ -200,10 +204,7 @@ class _RankingView extends StatelessWidget {
         for (var i = 0; i < ranking.stores.length; i++)
           _StoreRow(store: ranking.stores[i], rank: i + 1),
         const SizedBox(height: 24),
-        const Disclaimer(
-          '많이 팔린 매장일수록 1등이 나올 기회도 많습니다. '
-          '어느 매장에서 사든 당첨 확률은 같습니다.',
-        ),
+        _storeNotice,
       ],
     );
   }
