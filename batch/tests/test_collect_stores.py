@@ -76,3 +76,40 @@ def test_settled_flag_distinguishes_the_two_zeroes():
     assert is_settled_without_winner(draw(289, 0, 39406643000)) is True
     assert is_settled_without_winner(draw(1236, 0, 0)) is False
     assert is_settled_without_winner(draw(1235, 9, 115445069000)) is False
+
+
+class EmptyApi:
+    """판매점이 아직 공개되지 않아 빈 배열을 돌려주는 상태."""
+
+    def __init__(self):
+        self.asked = []
+
+    def first_prize_stores(self, round_no):
+        self.asked.append(round_no)
+        return []
+
+
+def test_empty_response_is_not_cached(temp_data):
+    # 1등이 9명인데 판매점 목록이 아직 안 올라온 구간이 있다.
+    # 빈 파일로 못박으면 validate가 '1등 9명인데 판매점 0건'으로 걸어
+    # build가 exit 1 하고, 워크플로의 if: always() 커밋이 그 파일을 올린다.
+    # 이후 모든 실행이 캐시를 읽어 같은 자리에서 죽는다 — 손으로 지워야 풀린다.
+    settled = draw(1236, first_winners=9, total_sales=115445069000)
+
+    stores, remaining = collect_stores(EmptyApi(), {1236: settled})
+
+    assert not (temp_data / "1236.json").exists()
+    assert remaining == 1, "다음 실행이 다시 받도록 남은 것으로 센다"
+    assert 1236 not in stores
+
+
+def test_empty_response_is_retried_next_run(temp_data):
+    settled = {1236: draw(1236, 9, 115445069000)}
+    collect_stores(EmptyApi(), settled)
+
+    api = FakeApi()
+    stores, remaining = collect_stores(api, settled)
+
+    assert api.asked == [1236]
+    assert len(stores[1236]) == 1
+    assert remaining == 0

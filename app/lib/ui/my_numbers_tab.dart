@@ -34,6 +34,10 @@ class _MyNumbersTabState extends State<MyNumbersTab> {
   Draw get _draw => widget.draws.firstWhere((d) => d.round == _round);
 
   void _reload() {
+    // 저장·삭제를 기다리는 사이에 사용자가 탭을 옮기면 이 State가 버려진다.
+    // 그때 setState를 부르면 예외가 난다. 호출부가 전부 await 뒤에 있으므로
+    // 여기 한 곳에서 막는다.
+    if (!mounted) return;
     // 화살표 본문으로 쓰면 대입식의 값(Future)이 반환돼 setState가 거부한다.
     setState(() {
       _entries = _repo.loadAll();

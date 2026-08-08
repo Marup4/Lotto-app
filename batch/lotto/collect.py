@@ -9,17 +9,35 @@ from lotto.storage import load_json, store_path, write_json
 from lotto.store_era import has_store_data
 
 
+def is_settled(draw):
+    """집계가 끝난 회차인가.
+
+    추첨 직후에는 당첨번호만 나오고 당첨금·당첨자 수는 나중에 채워진다.
+    총 판매금액이 그 신호다 — 1등이 0명인 회차도 판매금액은 정상값이다.
+    앱의 `Draw.isSettled`와 같은 기준이다.
+    """
+    return draw["totalSales"] > 0
+
+
 def collect_draws(api, latest, known):
     """1회차부터 latest까지 당첨번호를 채운다.
 
-    known(이미 가진 회차)에 없는 구간만 요청한다. 주간 갱신에서는
-    보통 마지막 앵커 1회만 호출된다.
+    없는 회차와 **아직 집계가 안 끝난 회차**를 요청한다.
+    주간 갱신에서는 보통 마지막 앵커 1회만 호출된다.
+
+    집계 전 회차를 다시 받지 않으면 토요일 밤에 받은 0값이 영원히 굳는다.
+    그러면 `rounds_needing_stores`가 '1등 0명'으로 보고 건너뛰어 판매점이
+    영영 안 채워지고, 화면에도 '집계 중'이 계속 뜬다. `--full` 말고는
+    되돌릴 방법이 없다.
     """
     draws = dict(known)
-    missing = [r for r in range(1, latest + 1) if r not in draws]
+    stale = [r for r, d in draws.items() if not is_settled(d)]
+    missing = [r for r in range(1, latest + 1) if r not in draws] + stale
     if not missing:
         print("  당첨번호: 최신 상태")
         return draws
+    if stale:
+        print(f"  집계 전 회차 {len(stale)}개를 다시 받는다: {sorted(stale)}")
 
     # 결측 회차를 포함하는 앵커만 고른다 (앵커 N은 N-5~N+4를 덮는다)
     anchors = sorted({
@@ -46,9 +64,8 @@ def is_settled_without_winner(draw):
     영영 비게 되고 랭킹도 그때부터 멈춘다.
 
     총 판매금액으로 둘을 가른다. 1등이 0명인 회차도 판매금액은 정상값이다.
-    앱의 `Draw.isSettled`와 같은 기준이다.
     """
-    return draw["firstWinners"] == 0 and draw["totalSales"] > 0
+    return draw["firstWinners"] == 0 and is_settled(draw)
 
 
 def rounds_needing_stores(draws, cached):
@@ -107,10 +124,26 @@ def collect_stores(api, draws, max_requests=None):
     print(f"  판매점 {len(todo)}개 회차 부족 → 이번에 {len(batch)}개 요청"
           + (f" (남은 {remaining}개는 다음 실행에서)" if remaining else ""))
 
+    pending = 0
     for i, r in enumerate(batch, 1):
-        stores[r] = [parse_store(raw, r) for raw in api.first_prize_stores(r)]
-        write_json(store_path(r), stores[r])
+        fetched = [parse_store(raw, r) for raw in api.first_prize_stores(r)]
+        if not fetched:
+            # 1등이 있는 회차인데 목록이 비어 왔다 = 아직 공개 전이다.
+            # 이걸 캐시로 못박으면 validate가 '1등 N명인데 판매점 0건'으로
+            # 걸어 build가 exit 1 하고, 워크플로의 if: always() 커밋이 그
+            # 빈 파일을 올린다. 이후 모든 실행이 캐시를 읽어 같은 자리에서
+            # 죽는다 — 손으로 지워야 풀리는 영구 장애다.
+            pending += 1
+            continue
+        stores[r] = fetched
+        write_json(store_path(r), fetched)
         if i % 50 == 0:
             print(f"    {i}/{len(batch)}", flush=True)
 
-    return stores, remaining
+    if pending:
+        print(f"  판매점 {pending}개 회차는 아직 공개 전이다 — 다음 실행에서 다시 받는다")
+
+    # 공개 전 회차는 '남은 것'으로 센다. 그래야 complete=False가 되어
+    # validate가 판매점 0건을 오탐하지 않고, 통계·랭킹도 미완성 상태로
+    # 덮어쓰지 않는다.
+    return stores, remaining + pending

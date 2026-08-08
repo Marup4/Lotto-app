@@ -22,7 +22,9 @@ def parse_store(raw, round_no):
         # 실제로 매장명이 비어 있는 레코드가 있다 (578회). 앱에 "null"이
         # 찍히지 않도록 여기서 막는다.
         "name": raw["shpNm"] or "이름 미상",
-        "address": fix_region(" ".join(raw["shpAddr"].split())),
+        # 이름·시도·시군구가 실제로 null인 레코드가 있었으므로 주소도 방어한다.
+        # 여기서 안 막으면 AttributeError로 배치 전체가 죽는다.
+        "address": fix_region(" ".join((raw["shpAddr"] or "").split())),
         # 값이 null인 레코드가 있다 (572회 시군구 결측).
         "sido": fix_region(raw["tm1ShpLctnAddr"] or ""),
         "sigungu": raw["tm2ShpLctnAddr"] or "",

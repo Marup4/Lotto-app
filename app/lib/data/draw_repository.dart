@@ -26,12 +26,20 @@ class DrawRepository {
     final cached = _cache;
     if (cached != null) return cached;
 
-    // 보관본이 번들보다 최신이면 그쪽이 기준이 된다.
-    final local = await _sync.cached() ?? await _fromBundle();
+    // 둘 중 최신인 쪽이 기준이 된다. 보관본을 무조건 앞세우면, 앱을
+    // 업데이트해 번들에 새 회차가 들어와도 오프라인에서는 예전 캐시가
+    // 이겨 방금 설치한 데이터가 무시된다.
+    final local = _newer(await _sync.cached(), await _fromBundle());
     final fresh = await _sync.refresh(localLatest: local.last.round);
 
     return _cache = fresh ?? local;
   }
+
+  /// 회차가 더 큰 쪽. 둘 다 회차 오름차순이다.
+  List<Draw> _newer(List<Draw>? cached, List<Draw> bundle) =>
+      cached != null && cached.last.round >= bundle.last.round
+          ? cached
+          : bundle;
 
   Future<List<Draw>> _fromBundle() async {
     final text = await rootBundle.loadString(_assetPath);

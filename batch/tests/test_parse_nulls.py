@@ -36,3 +36,12 @@ def test_normal_records_are_untouched():
 
     assert parsed["name"] == "가게"
     assert parsed["sigungu"] == "서초구"
+
+
+def test_missing_address_does_not_crash_the_batch():
+    # 이름·시군구가 실제로 null이었으므로 주소도 그럴 수 있다고 본다.
+    # 막지 않으면 AttributeError로 배치 전체가 죽는다 — 한 회차 때문에
+    # 그 주의 갱신이 통째로 멈춘다.
+    raw = {**BASE, "shpAddr": None}
+
+    assert parse_store(raw, round_no=1235)["address"] == ""

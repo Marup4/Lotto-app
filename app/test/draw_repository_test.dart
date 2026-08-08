@@ -79,4 +79,19 @@ void main() {
 
     expect(identical(await repo.loadAll(), await repo.loadAll()), isTrue);
   });
+
+
+  test('번들이 캐시보다 최신이면 번들을 쓴다', () async {
+    // 앱을 업데이트하면 번들에 더 최신 회차가 들어온다. 그런데 기기에는
+    // 예전에 받아둔 캐시가 남아 있다. 오프라인 상태로 열면 캐시가
+    // 이기면서 방금 설치한 새 데이터가 무시된다.
+    SharedPreferences.setMockInitialValues({
+      'cached_draws': jsonEncode([drawJson(1000)]),
+    });
+
+    final draws = await DrawRepository(sync: DrawSync(client: deadServer))
+        .loadAll();
+
+    expect(draws.last.round, 1235, reason: '번들(1235)이 캐시(1000)를 이겨야 한다');
+  });
 }

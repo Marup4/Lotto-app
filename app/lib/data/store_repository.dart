@@ -30,18 +30,49 @@ class StoreRepository {
 
   /// 역대 1등 배출 매장 랭킹. 앱 수명 동안 한 번만 만든다.
   Future<Ranking> loadRanking() async => _ranking ??= Ranking.fromJson(
-        await _load('store-ranking.json'),
+        await _load('store-ranking.json', _rankingRecency),
       );
 
   /// 최근 회차의 1등 판매점.
   Future<RecentStores> loadRecent() async => _recent ??= RecentStores.fromJson(
-        await _load('recent-stores.json'),
+        await _load('recent-stores.json', _recentRecency),
       );
 
-  /// 서버 → 보관본 → 번들 순으로 시도해 가장 새 것을 돌려준다.
-  Future<Map<String, dynamic>> _load(String file) async {
-    final local = await _fromPrefs(file) ?? await _fromBundle(file);
+  /// 서버 → (보관본 · 번들 중 최신) 순으로 시도해 가장 새 것을 돌려준다.
+  ///
+  /// 보관본을 무조건 앞세우면, 앱을 업데이트해 번들에 새 자료가 들어와도
+  /// 오프라인에서는 예전 캐시가 이겨 방금 설치한 데이터가 무시된다.
+  /// 이 파일들에는 회차 번호가 없으므로 [recency]로 새것을 가린다.
+  Future<Map<String, dynamic>> _load(
+    String file,
+    int Function(Map<String, dynamic>) recency,
+  ) async {
+    final bundle = await _fromBundle(file);
+    final cached = await _fromPrefs(file);
+    final local = cached != null && recency(cached) >= recency(bundle)
+        ? cached
+        : bundle;
     return await _refresh(file) ?? local;
+  }
+
+  /// 랭킹의 새것 정도 — 가장 최근 배출 회차. 자료가 늘수록 커진다.
+  static int _rankingRecency(Map<String, dynamic> json) {
+    var latest = 0;
+    for (final s in json['stores'] as List? ?? const []) {
+      final r = (s as Map<String, dynamic>)['latestRound'] as int? ?? 0;
+      if (r > latest) latest = r;
+    }
+    return latest;
+  }
+
+  /// 최근 회차 판매점의 새것 정도 — 담긴 회차 중 가장 큰 것.
+  static int _recentRecency(Map<String, dynamic> json) {
+    var latest = 0;
+    for (final key in json.keys) {
+      final r = int.tryParse(key) ?? 0;
+      if (r > latest) latest = r;
+    }
+    return latest;
   }
 
   /// 서버 파일이 보관본과 다르면 받아서 보관한다.
