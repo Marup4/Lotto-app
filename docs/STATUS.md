@@ -1,6 +1,6 @@
 # 진행 상황
 
-> 최종 갱신: 2026-08-08 / 다음 세션이 이 문서부터 읽으면 된다.
+> 최종 갱신: 2026-08-09 / 다음 세션이 이 문서부터 읽으면 된다.
 > 설계 문서: Notion "앱 개발 설계(초안/임시) 로또" **v0.3**
 
 ## 한 줄 요약
@@ -19,7 +19,7 @@ Week 0·1·2 완료 — **설계 문서의 다섯 탭이 모두 구현됐고 실
 | minSdk | 26 (Android 8) | |
 | 번들 데이터 | 당첨번호 100회차 18KB + 매장 랭킹 12KB + 최근 10회차 판매점 32KB | 설계 문서 §13-3. 배치가 직접 갱신한다 |
 | 저장소 | https://github.com/Marup4/Lotto-app | main 브랜치 · **공개** |
-| 앱 표시 이름 | **미정** (현재 `로또 번호 확인`) | 다음 세션 과제 |
+| 앱 표시 이름 | **로또팟** | 2026-08-09 확정 |
 
 ## 현재 수치 (2026-08-08)
 
@@ -88,7 +88,7 @@ Play 심사 대응이자 정직성 문제다. `recommend_tab_test.dart`가 금�
 신규 JSON API를 찾아 v0.3으로 반영. 자세한 API 스펙은 Notion 부록 A와
 [batch/lotto/client.py](../batch/lotto/client.py) 참조.
 
-### Week 1 — 데이터 파이프라인 ✅ (코드) / ⏳ (백필 50%)
+### Week 1 — 데이터 파이프라인 ✅
 
 ```
 batch/lotto/
@@ -105,7 +105,7 @@ batch/build.py 오케스트레이션 (CLI)
 부수 산출물: `data/index.html`(육안 점검 화면), `run.ps1`,
 `.github/workflows/update-data.yml`
 
-### Week 2 — 앱 코어 ⏳ 진행 중
+### Week 2 — 앱 코어 ✅
 
 ```
 app/lib/
@@ -135,9 +135,27 @@ app/lib/
   ui/stores_tab.dart     ⑤ 판매점 탭
   ui/disclaimer.dart     ③·④·⑤ 공용 고지 (§7 F3·§12)
   main.dart              하단 5탭 — 전부 구현됨
+assets/icon/             아이콘 원본 (flutter_launcher_icons 입력)
 ```
 
 갤럭시 S21(Android 15, `R3CR505Q4QV`) 실기기 구동 확인 완료.
+
+### 이름과 아이콘 (2026-08-09)
+
+이름 **로또팟**. `android:label`·`MaterialApp title`·`AppBar` 세 곳에 있다.
+
+아이콘 원본은 `app/assets/icon/` 에 있고, 바꾼 뒤 아래를 돌려야 반영된다.
+
+```powershell
+cd app
+dart run flutter_launcher_icons
+```
+
+- **원본 이미지를 그대로 쓰면 안 됐다.** 잘라낸 가장자리에 배경 조각이
+  남아 아이콘에 삼각형 자국으로 보였다. 색으로 거르면 초록도 흰색도 아닌
+  조각이 살아남으므로, **이어진 덩어리 중 가장 큰 것만** 취해 걸렀다
+- 적응형 아이콘 전경은 캔버스의 **70%** 로 줄여 가운데 둔다. 런처가 원·
+  둥근사각 등으로 잘라내므로, 원본 그대로 쓰면 오른쪽 아래 'POT'이 잘린다
 
 ---
 
@@ -145,13 +163,11 @@ app/lib/
 
 기능 개발은 끝났다. 남은 것은 출시 준비와 검증이다.
 
-1. **앱 표시 이름 확정** — 현재 `로또 번호 확인`.
-   `app/android/app/src/main/AndroidManifest.xml`의 `android:label`
-2. **아이콘/스플래시** — 지금은 Flutter 기본 아이콘이다
-3. **API 26 AVD 생성** — minSdk 26 호환성은 실기기(Android 15)로 검증 불가.
+1. **API 26 AVD 생성** — minSdk 26 호환성은 실기기(Android 15)로 검증 불가.
    **다른 사람에게 배포하기 전에 반드시 확인할 것** (사용자가 뒤로 미룸)
-4. **서명 키 비밀번호 교체** — 아래 참조. Play 등록 전에 할 것
-5. **Play Console 개발자 등록 · 도박 정책 확인 · AdMob · 개인정보처리방침**
+2. **서명 키 비밀번호 교체** — 아래 참조. Play 등록 전에 할 것
+3. **스플래시 화면** — 아직 Flutter 기본값이다
+4. **Play Console 개발자 등록 · 도박 정책 확인 · AdMob · 개인정보처리방침**
 
 ### 배포용 파일 뽑기
 
