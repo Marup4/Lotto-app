@@ -16,7 +16,7 @@ class LottoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '로또 번호 확인',
+      title: '로또팟',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3B6FD4)),
@@ -45,7 +45,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('로또 번호 확인')),
+      appBar: AppBar(title: const Text('로또팟')),
       // 탭을 오갈 때 데이터를 다시 읽지 않도록 한 번 만든 Future를 재사용한다.
       body: FutureBuilder<List<Draw>>(
         future: _draws,

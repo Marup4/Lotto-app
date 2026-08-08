@@ -48,6 +48,24 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+# 런처 아이콘 생성 설정. 원본은 assets/icon/ 에 있고, 아래 명령으로
+# 안드로이드 각 해상도 아이콘을 만든다 (원본이 바뀔 때만 다시 실행):
+#   dart run flutter_launcher_icons
+#
+# 생성물은 android/app/src/main/res/ 아래로 들어가며 저장소에 커밋된다.
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+
+  # Android 8+ 적응형 아이콘. 런처가 원·둥근사각·물방울 등으로 잘라내므로
+  # 전경은 가운데 66% 안에 들어오도록 여백을 준 이미지를 쓴다.
+  # 배경색은 원본 아이콘의 밝은 민트색에서 땄다.
+  adaptive_icon_background: "#E8F8EF"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  min_sdk_android: 26
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
